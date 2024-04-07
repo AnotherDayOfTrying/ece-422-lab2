@@ -5,6 +5,7 @@ import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 
 //!!! TODO: change this to env
+console.log(process.env)
 const uri = `mongodb+srv://jjavier:${process.env.MONGODB_PASSWORD}@ece422-lab2.3nj7cdw.mongodb.net/?retryWrites=true&w=majority&appName=ece422-lab2`
 
 const client = new MongoClient(uri, {
