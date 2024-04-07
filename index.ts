@@ -48,10 +48,10 @@ await yargs(process.argv.slice(2))
             if (!(args.user && args.pass)) throw "invalid inputs"
             await createUser(client, args.user as string, args.pass as string, '')
             console.log("Created user...")
+            return
           }
         )
-    },
-    () => {console.log("GOT HERE")}
+    }
   )
   .command('pwd', 'see what directory you are currently in',
     (args)=>{
