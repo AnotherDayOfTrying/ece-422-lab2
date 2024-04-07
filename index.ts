@@ -1,17 +1,33 @@
 #!/usr/bin/env bun
 import os from "os"
 import sqlite3 from "sqlite3";
-import yargs, { string } from "yargs"
+import yargs from "yargs"
 import fs from "fs"
-import { cwd } from "process";
 import path from "path";
+import { MongoClient, ServerApiVersion } from "mongodb";
 
 
-let db = new sqlite3.Database('./test.db', (err) => {
+let db = new sqlite3.Database('./sql.db', (err) => {
   if (err) {
     console.error(err.message);
   }
 });
+
+//!!! TODO: change this to env
+const uri = `mongodb+srv://jjavier:${process.env.MONGODB_PASSWORD}@ece422-lab2.3nj7cdw.mongodb.net/?retryWrites=true&w=majority&appName=ece422-lab2`
+
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+})
+
+await client.connect();
+// Send a ping to confirm a successful connection
+await client.db("admin").command({ ping: 1 });
+console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd")
 
