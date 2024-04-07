@@ -5,7 +5,26 @@ import yargs, { string } from "yargs"
 import fs from "fs"
 import { cwd } from "process";
 import path from "path";
+import crypto from 'crypto';
 
+const algorithm = 'aes-256-ctr';
+const password = 'password'; 
+const secretKey = crypto.createHash('sha256').update(String(password)).digest('base64').substr(0, 32);
+const iv = crypto.randomBytes(16);
+
+const encrypt = (buffer: Buffer): Buffer => {
+  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
+  const result = Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
+  return result;
+};
+
+const decrypt = (encrypted: Buffer): Buffer => {
+  const iv = encrypted.slice(0, 16);
+  const data = encrypted.slice(16);
+  const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
+  const result = Buffer.concat([decipher.update(data), decipher.final()]);
+  return result;
+};
 
 let db = new sqlite3.Database('./test.db', (err) => {
   if (err) {
@@ -132,6 +151,48 @@ yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(args.file as string) && args.file) {
         fs.renameSync(args.file as string, args.rfile as string)
+      }
+    })
+  .command('encrypt [file]', 'encrypt a file', 
+    (yargs) => {
+      yargs.positional('file', {
+        describe: 'file to encrypt',
+        default: '',
+        type: 'string'
+      });
+    },
+    (args) => {
+      process.chdir(path.join(pwd))
+      if (fs.existsSync(args.file as string)) {
+        const fileContent = fs.readFileSync(args.file);
+        const encryptedContent = encrypt(fileContent);
+        fs.writeFileSync(args.file, encryptedContent);
+        console.log(`File encrypted: ${args.file}`);
+      } else {
+        console.log('File not found');
+      }
+    })
+    .command('decrypt [file]', 'decrypt a file',
+    (yargs) => {
+      yargs.positional('file', {
+        describe: 'file to decrypt',
+        type: 'string',
+        demandOption: true,
+      });
+    },
+    (args) => {
+      process.chdir(path.join(pwd))
+      if (fs.existsSync(args.file)) {
+        const fileContent = fs.readFileSync(args.file);
+        try {
+          const decryptedContent = decrypt(fileContent);
+          fs.writeFileSync(args.file, decryptedContent);
+          console.log(`File decrypted: ${args.file}`);
+        } catch (error) {
+          console.log('Failed to decrypt file. It may have been altered or is not encrypted.');
+        }
+      } else {
+        console.log('File not found');
       }
     })
   .recommendCommands()
