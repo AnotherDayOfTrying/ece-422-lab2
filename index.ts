@@ -28,7 +28,6 @@ yargs(process.argv.slice(2))
   .command('admin', 'admin commmands',
     (yargs) => {
       yargs
-        .requiresArg('adminpass')
         .command('createUser [user] [pass]', "create a new user",
           (yargs) => {
             yargs
