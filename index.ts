@@ -46,8 +46,9 @@ yargs(process.argv.slice(2))
           async (args) => {
             if (!verifyAdmin(args.adminpass as string)) throw "incorrect admin password"
             await createUser(client, args.user as string, args.pass as string, '')
+            console.log("Created user...")
           }
-        )
+        ).argv
     },
   )
   .command('pwd', 'see what directory you are currently in',
