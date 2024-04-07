@@ -1,17 +1,8 @@
 #!/usr/bin/env bun
-import os from "os"
-import sqlite3 from "sqlite3";
 import yargs from "yargs"
 import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
-
-
-let db = new sqlite3.Database('./sql.db', (err) => {
-  if (err) {
-    console.error(err.message);
-  }
-});
 
 //!!! TODO: change this to env
 const uri = `mongodb+srv://jjavier:${process.env.MONGODB_PASSWORD}@ece422-lab2.3nj7cdw.mongodb.net/?retryWrites=true&w=majority&appName=ece422-lab2`
