@@ -21,7 +21,7 @@ await client.connect();
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd")
 
-yargs(process.argv.slice(2))
+await yargs(process.argv.slice(2))
   .env('sfs')
   .scriptName('sfs')
   .usage('Usage: $0 <command> [options]')
@@ -45,10 +45,14 @@ yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!verifyAdmin(args.adminpass as string)) throw "incorrect admin password"
+            if (!(args.user && args.pass)) throw "invalid inputs"
             await createUser(client, args.user as string, args.pass as string, '')
             console.log("Created user...")
           }
-        ).argv
+        ),
+        () => {
+          console.log("GOT HERE")
+        }
     },
   )
   .command('pwd', 'see what directory you are currently in',
