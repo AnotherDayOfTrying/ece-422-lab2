@@ -3,6 +3,8 @@ import yargs from "yargs"
 import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { createUser } from "./admin";
+import { verifyAdmin } from "./auth";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -14,10 +16,8 @@ const client = new MongoClient(uri, {
   }
 })
 
+// connect to db
 await client.connect();
-// Send a ping to confirm a successful connection
-await client.db("admin").command({ ping: 1 });
-console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd")
 
@@ -25,6 +25,29 @@ yargs(process.argv.slice(2))
   .env('sfs')
   .scriptName('sfs')
   .usage('Usage: $0 <command> [options]')
+  .command('admin', 'admin commmands',
+    (yargs) => {
+      yargs
+        .requiresArg('adminpass')
+        .command('createUser [user] [pass]', "create a new user",
+          (yargs) => {
+            yargs
+              .positional('user', {
+                type: 'string',
+                demandOption: true,
+              })
+              .positional('pass', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!verifyAdmin(args.adminpass as string)) throw "incorrect admin password"
+            await createUser(client, args.user as string, args.pass as string, '')
+          }
+        )
+    },
+  )
   .command('pwd', 'see what directory you are currently in',
     (args)=>{
     },
