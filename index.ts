@@ -3,7 +3,7 @@ import yargs from "yargs"
 import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
-import { createUser } from "./admin";
+import { createGroup, createUser } from "./admin";
 import { verifyAdmin } from "./auth";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
@@ -31,6 +31,9 @@ await yargs(process.argv.slice(2))
         .option('adminpass', {
           demandOption: true,
         })
+        .middleware((yargs) => {
+            if (!verifyAdmin(yargs.adminpass as string)) throw "incorrect admin password"
+        })
         .command('createUser [user] [pass]', "create a new user",
           (yargs) => {
             yargs
@@ -44,13 +47,26 @@ await yargs(process.argv.slice(2))
               })
           },
           async (args) => {
-            if (!verifyAdmin(args.adminpass as string)) throw "incorrect admin password"
             if (!(args.user && args.pass)) throw "invalid inputs"
             await createUser(client, args.user as string, args.pass as string, '')
-            console.log("Created user...")
-            return
+            console.log(`Created User: ${args.user}`)
           }
         )
+        .command('createGroup [name]', "create new group",
+          (yargs) => {
+            yargs
+              .positional('name', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!args.name) throw "invalid inputs"
+            await createGroup(client, args.name as string)
+            console.log(`Created Group: ${args.name}`)
+          }
+        )
+        .demandCommand()
     }
   )
   .command('pwd', 'see what directory you are currently in',
