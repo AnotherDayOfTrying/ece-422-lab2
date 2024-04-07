@@ -49,11 +49,9 @@ await yargs(process.argv.slice(2))
             await createUser(client, args.user as string, args.pass as string, '')
             console.log("Created user...")
           }
-        ),
-        () => {
-          console.log("GOT HERE")
-        }
+        )
     },
+    () => {console.log("GOT HERE")}
   )
   .command('pwd', 'see what directory you are currently in',
     (args)=>{
