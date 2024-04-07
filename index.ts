@@ -4,9 +4,7 @@ import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 
-//!!! TODO: change this to env
-console.log(process.env)
-const uri = `mongodb+srv://jjavier:${process.env.MONGODB_PASSWORD}@ece422-lab2.3nj7cdw.mongodb.net/?retryWrites=true&w=majority&appName=ece422-lab2`
+const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
 const client = new MongoClient(uri, {
   serverApi: {
