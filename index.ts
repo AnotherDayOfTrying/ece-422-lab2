@@ -2,10 +2,11 @@
 import yargs from "yargs"
 import fs from "fs"
 import path from "path";
+import crypto from "crypto"
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
+import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity, hashWithSalt } from "./encryption";
 import { createMetadata, deleteMetadata, updateMetadata, verifyUserFiles } from "./file";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
@@ -52,8 +53,9 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
-            const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
-            await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'), [])
+            const salt = crypto.randomBytes(16).toString('hex'); 
+            const hashedPassword = hashWithSalt(args.pass as string, salt)
+            await createUser(client, args.user as string, hashedPassword, salt, generateKey(args.pass as string), generateIV().toString('hex'), [])
             fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }

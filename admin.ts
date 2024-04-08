@@ -4,6 +4,7 @@ import { MongoClient } from "mongodb";
 export interface User {
     username: string;
     password: string;
+    salt: string;
     key: string;
     iv: string;
     groups: string[];
@@ -16,10 +17,11 @@ export interface Group {
     users: string[];
 }
 
-export const createUser = async (client: MongoClient, user: string, encryptedPassword: string, key: string, iv: string, groups: string[]) => {
+export const createUser = async (client: MongoClient, user: string, hashedPassword: string, salt: string, key: string, iv: string, groups: string[]) => {
     await client.db('sfs').collection<User>('users').insertOne({
         username: user,
-        password: encryptedPassword,
+        password: hashedPassword,
+        salt: salt,
         key: key,
         iv: iv,
         groups: groups

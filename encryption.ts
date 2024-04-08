@@ -33,3 +33,8 @@ export const reencrypt = (encryptedData: Buffer, secretKey: string, iv: Buffer, 
 export const hashFileIntegrity = (data: string) => {
   return crypto.createHash('sha256').update(data).digest('hex')
 }
+
+export const hashWithSalt = (data: string, salt: string) => {
+  const hash = crypto.pbkdf2Sync(data, salt, 1000, 64, 'sha512').toString('hex');
+  return hash
+}
