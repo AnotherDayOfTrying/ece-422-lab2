@@ -258,7 +258,7 @@ await yargs(process.argv.slice(2))
         console.log("Directory already exists")
       }
     })
-  .command('touch [file] -r (u|g|a) -w (u|g|a)', 'create a new file',
+  .command('touch [file] [-r (u|g|a)] [-w (u|g|a)]', 'create a new file',
     (yargs) => {
       yargs.positional('file', {
         describe: 'file to create',
@@ -452,7 +452,7 @@ await yargs(process.argv.slice(2))
         })
       }
     })
-  .command('changePermissions [file] -r (u|g|a) -w (u|g|a)', 'Change permission of a file',
+  .command('changePermissions [file] [-r (u|g|a)] [-w (u|g|a)]', 'Change permission of a file',
     (yargs) => {
       yargs
         .positional('file', {
