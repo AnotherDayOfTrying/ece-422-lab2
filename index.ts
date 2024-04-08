@@ -228,7 +228,6 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const file = fs.readFileSync(encryptedFile).toString()
-        console.log(file)
         const fileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
         console.log(fileData)
       } else {
@@ -276,10 +275,17 @@ await yargs(process.argv.slice(2))
         type: 'string'
       })
     },
-    (args) => {
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       process.chdir(path.join(pwd))
-      if (fs.existsSync(args.file as string) && args.file) {
-        fs.renameSync(args.file as string, args.rfile as string)
+      if (fs.existsSync(encryptedFile) && args.file) {
+        fs.renameSync(encryptedFile, newEncryptedFile)
       }
     })
   // .command('encrypt [file]', 'encrypt a file', 
