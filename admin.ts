@@ -29,11 +29,11 @@ export const createGroup = async (client: MongoClient, group: string) => {
 
 export const addUserToGroup = async (client: MongoClient, user: string, group: string) => {
     await client.db('sfs').collection<Group>('groups').updateOne(
-        {groupName: group},
+        {name: group},
         {$addToSet: {"users": user}}
     )
 }
 
 export const removeUserFromGroup = async (client: MongoClient, user: string, group: string) => {
-    await client.db('sfs').collection<Group>('groups').updateOne({groupName: group}, {$pull: {"users": user}})
+    await client.db('sfs').collection<Group>('groups').updateOne({name: group}, {$pull: {"users": user}})
 }
