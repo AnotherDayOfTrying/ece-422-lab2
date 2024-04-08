@@ -29,16 +29,17 @@ export const verifyUserFiles = async (client: MongoClient, user: string, pwd: st
     const _user = await client.db('sfs').collection<User>('users').findOne({_id: new ObjectId(user)})
     console.log(_user)
     console.log(pwd)
-    fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).forEach(async (file) => {
-        if (!file.isDirectory) {
-            const metadata = await fetchMetadata(client, file.name);
-            const data = fs.readFileSync(file.path).toString()
-            console.log(file)
-            console.log(metadata)
-            console.log(data)
-            if (metadata?.integrity !== hashFileIntegrity(file.name, data)) {
-                console.error(`File ${file.path} has been modified!`)
-            }
-        }
-    })
+    console.log(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}))
+    // .forEach(async (file) => {
+    //     if (!file.isDirectory) {
+    //         const metadata = await fetchMetadata(client, file.name);
+    //         const data = fs.readFileSync(file.path).toString()
+    //         console.log(file)
+    //         console.log(metadata)
+    //         console.log(data)
+    //         if (metadata?.integrity !== hashFileIntegrity(file.name, data)) {
+    //             console.error(`File ${file.path} has been modified!`)
+    //         }
+    //     }
+    // })
 }
