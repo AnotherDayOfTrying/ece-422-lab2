@@ -5,7 +5,7 @@ import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt } from "./encryption";
+import { generateKey, generateIV, encrypt, decrypt } from "./encryption";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -136,11 +136,17 @@ await yargs(process.argv.slice(2))
   .command('ls', 'list the files in current directory',
     (args)=>{
     },
-    (args) => {
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
       fs.readdirSync(pwd, {
         withFileTypes: true
       }).forEach((file) => {
-        console.log(file.isDirectory() ? "/" + file.name : file.name)
+        const fileName = decrypt(Buffer.from(file.name, 'hex'), userInfo.key)
+        console.log(file.isDirectory() ? "/" + fileName : fileName)
       })
     })
   .command('cd [dir]', 'change directory',
@@ -175,9 +181,11 @@ await yargs(process.argv.slice(2))
         return
       }
       process.chdir(path.join(pwd))
-      if (!fs.existsSync(args.dir as string) && args.dir) {
-        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      if (!fs.existsSync(encryptedDirectory) && args.dir) {
         fs.mkdirSync(encryptedDirectory)
+      } else {
+        console.log("Directory already exists")
       }
     })
   .command('touch [file]', 'create a new file',
@@ -195,9 +203,11 @@ await yargs(process.argv.slice(2))
         return
       }
       process.chdir(path.join(pwd))
-      if (!fs.existsSync(args.file as string) && args.file) {
-        const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      if (!fs.existsSync(encryptedFile) && args.file) {
         fs.writeFileSync(encryptedFile, '')
+      } else {
+        console.log("File already exists")
       }
     })
   .command('cat [file]', 'read a file',
