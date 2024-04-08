@@ -301,7 +301,7 @@ await yargs(process.argv.slice(2))
       if (fs.existsSync(encryptedFile) && args.file) {
         const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
         fs.writeFileSync(encryptedFile, encryptedFileData)
-        await updateMetadata(client, {
+        await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
           integrity: hashFileIntegrity(encryptedFileData),
           owner: userInfo._id.toString(),
@@ -341,7 +341,7 @@ await yargs(process.argv.slice(2))
         console.log(data)
         console.log(newEncryptedFile)
         fs.renameSync(encryptedFile, newEncryptedFile)
-        await updateMetadata(client, {
+        await updateMetadata(client, encryptedFile, {
           name: newEncryptedFile,
           integrity: hashFileIntegrity(data),
           owner: userInfo._id.toString(),

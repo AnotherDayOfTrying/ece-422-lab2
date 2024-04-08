@@ -22,8 +22,8 @@ export const createMetadata = async (client: MongoClient, metadata: Metadata) =>
     await client.db('sfs').collection<Metadata>('metadata').insertOne(metadata)
 }
 
-export const updateMetadata = async (client: MongoClient, metadata: Metadata) => {
-    await client.db('sfs').collection<Metadata>('metadata').updateOne({name: metadata.name}, {
+export const updateMetadata = async (client: MongoClient, name: string, metadata: Metadata) => {
+    await client.db('sfs').collection<Metadata>('metadata').updateOne({name: name}, {
         $set: metadata
     })
 }
