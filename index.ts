@@ -203,7 +203,7 @@ await yargs(process.argv.slice(2))
         console.log(directory)
       }
     })
-  .command('mkdir [dir] [-r (u|g|a) -w (u|g|a)]', 'make a new subdirectory',
+  .command('mkdir [dir] [-r (u|g|a)] [-w (u|g|a)]', 'make a new subdirectory',
     (yargs)=>{
       yargs.positional('dir', {
         describe: 'directory to create',
@@ -331,6 +331,29 @@ await yargs(process.argv.slice(2))
       const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       if (fs.existsSync(encryptedFile) && args.file) {
         fs.unlinkSync(encryptedFile)
+        await deleteMetadata(client, encryptedFile)
+      } else {
+        console.log("File does not exist")
+      }
+    })
+  .command('rmdir [dir]', 'remove directory',
+    (yargs) => {
+      yargs.positional('dir', {
+        describe: 'dir to remove',
+        default: '',
+        type: 'string'
+      })
+    },
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+      process.chdir(path.join(pwd))
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      if (fs.existsSync(encryptedFile) && args.file) {
+        fs.rmdirSync(encryptedFile)
         await deleteMetadata(client, encryptedFile)
       } else {
         console.log("File does not exist")
