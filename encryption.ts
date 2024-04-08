@@ -15,9 +15,6 @@ export const generateIV = (): string => {
 }
 
 export const encrypt = (buffer: Buffer, secretKey: string, iv: string): Buffer => {
-  console.log(secretKey)
-  console.log(iv)
-  console.log(Buffer.from(iv, 'hex').byteLength)
   const cipher = crypto.createCipheriv(algorithm, secretKey, Buffer.from(iv, 'hex'));
   const result = Buffer.concat([Buffer.from(iv), cipher.update(buffer), cipher.final()]);
   return result;
