@@ -24,7 +24,6 @@ const ROOT_DIR = './file_system/home'
 const pwd = "./file_system" + fs.readFileSync("./pwd") // read pwd
 const user = fs.readFileSync('./user').toString() // read user id
 const root = Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0] ? false : true
-console.log(root)
 
 await yargs(process.argv.slice(2))
   .env('sfs')
@@ -338,8 +337,6 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const data = fs.readFileSync(encryptedFile).toString()
-        console.log(encryptedFile)
-        console.log(newEncryptedFile)
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, encryptedFile, {
           name: newEncryptedFile,
