@@ -15,6 +15,7 @@ export const loginUser = async (client: MongoClient, user: string, password: str
     const _user = await client.db('sfs').collection<User>('users').findOne({username: user});
     if (_user && _user.password === hashWithSalt(password, _user.salt)) {
         fs.writeFileSync('./user', _user._id.toString());
+        fs.writeFileSync('./pwd', '/home')
         console.log(`Logged in as ${user}`)
     } else {
         console.log("Unable to authenticate...")

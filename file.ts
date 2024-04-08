@@ -74,7 +74,7 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
     }
     const pwd = path.join(root_dir, _user.username)
     await Promise.all(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).map(async (file) => {
-        if (!file.isDirectory()) {
+        // if (!file.isDirectory()) {
             const filename = file.name.split('/')
             const metadata = await fetchMetadata(client, filename[filename.length - 1])
             if (!metadata) { // no metadata means filename has been modified
@@ -85,6 +85,6 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
                     console.error(`File ${path.join(pwd, file.name)} has been modified!`)
                 }
             }
-        }
+        // }
     }))
 }
