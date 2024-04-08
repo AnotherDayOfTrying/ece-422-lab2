@@ -255,7 +255,10 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        console.log(encryptedFileData)
         fs.writeFileSync(encryptedFile, encryptedFileData)
+      } else {
+        console.log("File does not exist")
       }
     })
   .command('mv [file] [rfile]', 'rename a file',
