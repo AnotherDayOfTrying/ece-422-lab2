@@ -114,12 +114,14 @@ await yargs(process.argv.slice(2))
     async (args) => {
       if (!(args.user && args.password)) throw "invalid input"
       await loginUser(client, args.user as string, args.password as string)
+      console.log(`Logged in as ${args.user}`)
     }
   )
   .command('logout', 'logout user',
     () => {},
     () => {
       logoutUser()
+      console.log(`Logged out...`)
     }
   )
   .command('pwd', 'see what directory you are currently in',
@@ -243,3 +245,6 @@ await yargs(process.argv.slice(2))
   .help('h')
   .alias('h', 'help')
   .parse()
+
+//testing
+console.log("GOT HERE")
