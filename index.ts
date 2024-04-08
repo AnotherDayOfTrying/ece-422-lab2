@@ -402,6 +402,10 @@ await yargs(process.argv.slice(2))
   .command('whoami', 'display which user you are',
     () => {},
     async () => {
+      if (!user) {
+        console.log("Currently not logged in...")
+        return
+      }
       const _user = await fetchUser(client, user)
       console.log(_user?.username)
     }
