@@ -227,9 +227,12 @@ await yargs(process.argv.slice(2))
       const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const file = fs.readFileSync(encryptedFile).toString('hex')
+        const file = fs.readFileSync(encryptedFile).toString()
+        console.log(file)
         const fileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
         console.log(fileData)
+      } else {
+        console.log("File does not exist")
       }
     })
   .command('echo [file] [data]', 'write to a file',
@@ -255,7 +258,6 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-        console.log(encryptedFileData)
         fs.writeFileSync(encryptedFile, encryptedFileData)
       } else {
         console.log("File does not exist")
