@@ -4,7 +4,7 @@ import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
-import { loginUser, logoutUser, verifyAdmin } from "./auth";
+import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, encrypt } from "./encryption";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
@@ -20,7 +20,8 @@ const client = new MongoClient(uri, {
 // connect to db
 await client.connect();
 
-const pwd = "./file_system/" + fs.readFileSync("./pwd")
+const pwd = "./file_system/" + fs.readFileSync("./pwd") // read pwd
+const user = fs.readFileSync('./user').toString() // read user id
 
 await yargs(process.argv.slice(2))
   .env('sfs')
@@ -167,10 +168,16 @@ await yargs(process.argv.slice(2))
         type: 'string'
       })
     },
-    (args) => {
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
       process.chdir(path.join(pwd))
       if (!fs.existsSync(args.dir as string) && args.dir) {
-        fs.mkdirSync(args.dir as string)
+        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        fs.mkdirSync(encryptedDirectory)
       }
     })
   .command('touch [file]', 'create a new file',
@@ -181,10 +188,16 @@ await yargs(process.argv.slice(2))
         type: 'string'
       })
     },
-    (args) => {
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
       process.chdir(path.join(pwd))
       if (!fs.existsSync(args.file as string) && args.file) {
-        fs.writeFileSync(args.file as string, '')
+        const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        fs.writeFileSync(encryptedFile, '')
       }
     })
   .command('cat [file]', 'read a file',
