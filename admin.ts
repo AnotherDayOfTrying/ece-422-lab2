@@ -16,7 +16,7 @@ export interface Group {
 export const createUser = async (client: MongoClient, user: string, encryptedPassword: string, key: string, iv: string) => {
     await client.db('sfs').collection('users').insertOne({
         username: user,
-        password: encryptedPassword, //!!! TODO: encrypt password
+        password: encryptedPassword,
         key: key,
         iv: iv,
     })

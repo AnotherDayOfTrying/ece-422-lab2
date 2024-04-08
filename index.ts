@@ -5,7 +5,7 @@ import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV } from "./encryption";
+import { generateKey, generateIV, encrypt } from "./encryption";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -49,6 +49,7 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
+            const encryptedPassword = encrypt(Buffer.from(args.pass as string), process.env.ADMIN_PASSWORD!, process.env.ADMIN_IV!)
             await createUser(client, args.user as string, args.pass as string, generateKey(args.pass as string), generateIV())
             console.log(`Created User: ${args.user}`)
           }
