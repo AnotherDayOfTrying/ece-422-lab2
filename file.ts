@@ -23,7 +23,9 @@ export const createMetadata = async (client: MongoClient, metadata: Metadata) =>
 }
 
 export const updateMetadata = async (client: MongoClient, metadata: Metadata) => {
-    await client.db('sfs').collection<Metadata>('metadata').updateOne({name: metadata.name}, metadata)
+    await client.db('sfs').collection<Metadata>('metadata').updateOne({name: metadata.name}, {
+        $set: metadata
+    })
 }
 
 export const verifyUserFiles = async (client: MongoClient, user: string, root_dir: string) => {
