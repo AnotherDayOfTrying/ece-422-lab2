@@ -338,7 +338,7 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const data = fs.readFileSync(encryptedFile).toString()
-        console.log(data)
+        console.log(encryptedFile)
         console.log(newEncryptedFile)
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, encryptedFile, {
