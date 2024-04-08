@@ -239,6 +239,48 @@ await yargs(process.argv.slice(2))
         fs.renameSync(args.file as string, args.rfile as string)
       }
     })
+  // .command('encrypt [file]', 'encrypt a file', 
+  //   (yargs) => {
+  //     yargs.positional('file', {
+  //       describe: 'file to encrypt',
+  //       default: '',
+  //       type: 'string'
+  //     });
+  //   },
+  //   (args) => {
+  //     process.chdir(path.join(pwd))
+  //     if (fs.existsSync(args.file as string)) {
+  //       const fileContent = fs.readFileSync(args.file);
+  //       const encryptedContent = encrypt(fileContent);
+  //       fs.writeFileSync(args.file, encryptedContent);
+  //       console.log(`File encrypted: ${args.file}`);
+  //     } else {
+  //       console.log('File not found');
+  //     }
+  //   })
+  //   .command('decrypt [file]', 'decrypt a file',
+  //   (yargs) => {
+  //     yargs.positional('file', {
+  //       describe: 'file to decrypt',
+  //       type: 'string',
+  //       demandOption: true,
+  //     });
+  //   },
+  //   (args) => {
+  //     process.chdir(path.join(pwd))
+  //     if (fs.existsSync(args.file)) {
+  //       const fileContent = fs.readFileSync(args.file);
+  //       try {
+  //         const decryptedContent = decrypt(fileContent);
+  //         fs.writeFileSync(args.file, decryptedContent);
+  //         console.log(`File decrypted: ${args.file}`);
+  //       } catch (error) {
+  //         console.log('Failed to decrypt file. It may have been altered or is not encrypted.');
+  //       }
+  //     } else {
+  //       console.log('File not found');
+  //     }
+  //   })
   .recommendCommands()
   .strictCommands()
   .demandCommand()
