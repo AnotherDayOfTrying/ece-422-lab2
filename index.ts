@@ -169,8 +169,8 @@ await yargs(process.argv.slice(2))
         process.chdir(path.join(pwd, args.dir as string))
       } else {
         const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-        console.log(path.join(pwd, encryptedDirectory))
-        process.chdir(path.join(pwd, encryptedDirectory))
+        console.log(path.join(pwd, encryptedDirectory) + '/')
+        process.chdir(path.join(pwd, encryptedDirectory) + '/')
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
       if (newDirectory) {
