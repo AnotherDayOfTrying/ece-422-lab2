@@ -5,20 +5,19 @@ import { decrypt, hashFileIntegrity } from "./encryption";
 import path from "path";
 import { fetchUser } from "./auth";
 
+export type PermissionMode = "user" | "group" | "all"
+
 export interface Metadata {
     name: string; // encrypted name of file or directory
     integrity: string; // integrity hash
-    owner: string;
-    groups: string[];
-    userPermissions: boolean[]; // [0] = read; [1] = write
-    groupPermissions: boolean[];
-    allPermissions: boolean[];
+    owner: string; //onwer id
+    read: PermissionMode;
+    write: PermissionMode;
 }
 
 export interface PermissionsInput {
-    userPermissions: boolean[]; // [0] = read; [1] = write
-    groupPermissions: boolean[];
-    allPermissions: boolean[];
+    read: PermissionMode;
+    write: PermissionMode;
 }
 
 export const fetchMetadata = async (client: MongoClient, filename: string) => {
@@ -60,9 +59,8 @@ export const setPermissions = async (client: MongoClient, name: string, permissi
     await client.db('sfs').collection<Metadata>('metadata').updateOne(
         {name: name},
         {$set: {
-            userPermissions: permissions.userPermissions,
-            groupPermissions: permissions.groupPermissions,
-            allPermissions: permissions.allPermissions,
+            read: permissions.read,
+            write: permissions.write
         }}
     )
 }
