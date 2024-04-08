@@ -247,4 +247,4 @@ await yargs(process.argv.slice(2))
   .parse()
 
 //testing
-console.log("GOT HERE")
+process.exit()
