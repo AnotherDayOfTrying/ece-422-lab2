@@ -4,7 +4,7 @@ import type { User } from './admin'
 import { decrypt, generateKey, hashWithSalt } from './encryption'
 
 export const verifyAdmin = (password: string) => {
-    return password === process.env.ADMIN_PASSWORD
+    return hashWithSalt(password, process.env.ADMIN_SALT!) === process.env.ADMIN_PASSWORD
 }
 
 export const fetchUser = async (client: MongoClient, userId: string) => {
