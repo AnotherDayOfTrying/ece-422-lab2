@@ -21,7 +21,7 @@ const client = new MongoClient(uri, {
 // connect to db
 await client.connect();
 
-const pwd = "./file_system/" + fs.readFileSync("./pwd") // read pwd
+const pwd = "./file_system" + fs.readFileSync("./pwd") // read pwd
 const user = fs.readFileSync('./user').toString() // read user id
 const root = Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0] ? true : false
 console.log(Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0])
