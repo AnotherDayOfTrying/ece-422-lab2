@@ -20,13 +20,11 @@ const client = new MongoClient(uri, {
 
 // connect to db
 await client.connect();
-
+const ROOT_DIR = './file_system/home'
 const pwd = "./file_system" + fs.readFileSync("./pwd") // read pwd
 const user = fs.readFileSync('./user').toString() // read user id
-const root = Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0] ? true : false
-console.log(Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0])
+const root = Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0] ? false : true
 console.log(root)
-
 
 await yargs(process.argv.slice(2))
   .env('sfs')
@@ -57,6 +55,7 @@ await yargs(process.argv.slice(2))
             if (!(args.user && args.pass)) throw "invalid inputs"
             const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
             await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'))
+            fs.mkdirSync(ROOT_DIR, args.user) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
         )
@@ -142,6 +141,12 @@ await yargs(process.argv.slice(2))
     (args)=>{
     },
     async (args) => {
+      if (root) {
+        fs.readdirSync(pwd, {withFileTypes: true}).forEach((file) => {
+          console.log(file.isDirectory() ? "/" + file.name : file.name)
+        })
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
@@ -163,6 +168,15 @@ await yargs(process.argv.slice(2))
       })
     },
     async (args) => {
+      if (root) {
+        const cwd = process.cwd()
+        process.chdir(path.join(pwd, args.dir as string))
+        const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
+        if (newDirectory) {
+          fs.writeFileSync(cwd+'/pwd', newDirectory)
+          console.log(newDirectory)
+        }
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")

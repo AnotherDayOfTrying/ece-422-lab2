@@ -23,4 +23,5 @@ export const loginUser = async (client: MongoClient, user: string, password: str
 
 export const logoutUser = () => {
     fs.writeFileSync('./user', '')
+    fs.writeFileSync('./pwd', '/home')
 }
