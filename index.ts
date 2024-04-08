@@ -351,8 +351,8 @@ await yargs(process.argv.slice(2))
         return
       }
       process.chdir(path.join(pwd))
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      if (fs.existsSync(encryptedFile) && args.file) {
+      const encryptedFile = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      if (fs.existsSync(encryptedFile) && args.dir) {
         fs.rmdirSync(encryptedFile)
         await deleteMetadata(client, encryptedFile)
       } else {
