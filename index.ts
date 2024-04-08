@@ -157,9 +157,18 @@ await yargs(process.argv.slice(2))
         type: 'string'
       })
     },
-    (args) => {
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
       const cwd = process.cwd()
-      process.chdir(path.join(pwd, args.dir as string))
+      process.chdir(path.join(pwd))
+      if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/))
+        process.chdir(path.join(pwd, args.dir as string))
+      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      process.chdir(path.join(pwd, encryptedDirectory))
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
       if (newDirectory) {
         fs.writeFileSync(cwd+'/pwd', newDirectory)
