@@ -8,9 +8,7 @@ import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
 import { createMetadata, updateMetadata } from "./file";
 
-const root = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0] ? true : false
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
-console.log(root)
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -25,6 +23,9 @@ await client.connect();
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd") // read pwd
 const user = fs.readFileSync('./user').toString() // read user id
+const root = Array.from(pwd.matchAll(/^.*\/file_system(.*)/g), m => m[1])[0] ? true : false
+console.log(root)
+
 
 await yargs(process.argv.slice(2))
   .env('sfs')
