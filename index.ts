@@ -3,8 +3,8 @@ import yargs from "yargs"
 import fs from "fs"
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
-import { createGroup, createUser } from "./admin";
-import { verifyAdmin } from "./auth";
+import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
+import { loginUser, logoutUser, verifyAdmin } from "./auth";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -66,7 +66,60 @@ await yargs(process.argv.slice(2))
             console.log(`Created Group: ${args.name}`)
           }
         )
+        .command('addToGroup [user] [group]', "add user to group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await addUserToGroup(client, args.user as string, args.group as string)
+            console.log(`Added ${args.user} to group ${args.group}`)
+          }
+        )
+        .command('removeFromGroup [user] [group]', "remove user from group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await removeUserFromGroup(client, args.user as string, args.group as string)
+            console.log(`Removed ${args.user} from group ${args.group}`)
+          }
+        )
         .demandCommand()
+    }
+  )
+  .command('login [user] [password]', 'login to user',
+    (yargs) => {
+      yargs
+        .positional('user', {
+          demandOption: true
+        })
+        .positional('password', {
+          demandOption: true
+        })
+    },
+    async (args) => {
+      if (!(args.user && args.password)) throw "invalid input"
+      await loginUser(client, args.user as string, args.password as string)
+    }
+  )
+  .command('logout', 'logout user',
+    () => {},
+    () => {
+      logoutUser()
     }
   )
   .command('pwd', 'see what directory you are currently in',
