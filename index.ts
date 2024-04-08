@@ -6,7 +6,7 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
-import { createMetadata, updateMetadata } from "./file";
+import { createMetadata, updateMetadata, verifyUserFiles } from "./file";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -120,7 +120,10 @@ await yargs(process.argv.slice(2))
     },
     async (args) => {
       if (!(args.user && args.password)) throw "invalid input"
-      await loginUser(client, args.user as string, args.password as string)
+      const user = await loginUser(client, args.user as string, args.password as string)
+      if (user) {
+        await verifyUserFiles(client, user._id.toString(), path.join(ROOT_DIR, user.username))
+      }
     }
   )
   .command('logout', 'logout user',
