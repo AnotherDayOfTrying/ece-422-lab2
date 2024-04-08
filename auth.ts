@@ -19,8 +19,10 @@ export const loginUser = async (client: MongoClient, user: string, password: str
     } else {
         console.log("Unable to authenticate...")
     }
+    return _user
 }
 
 export const logoutUser = () => {
     fs.writeFileSync('./user', '')
+    fs.writeFileSync('./pwd', '/home')
 }

@@ -5,7 +5,8 @@ import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt, decrypt } from "./encryption";
+import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
+import { createMetadata, updateMetadata, verifyUserFiles } from "./file";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -19,9 +20,10 @@ const client = new MongoClient(uri, {
 
 // connect to db
 await client.connect();
-
-const pwd = "./file_system/" + fs.readFileSync("./pwd") // read pwd
+const ROOT_DIR = './file_system/home'
+const pwd = "./file_system" + fs.readFileSync("./pwd") // read pwd
 const user = fs.readFileSync('./user').toString() // read user id
+const root = Array.from(pwd.matchAll(/^.*\/file_system\/home(.*)/g), m => m[1])[0] ? false : true
 
 await yargs(process.argv.slice(2))
   .env('sfs')
@@ -52,6 +54,7 @@ await yargs(process.argv.slice(2))
             if (!(args.user && args.pass)) throw "invalid inputs"
             const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
             await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'))
+            fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
         )
@@ -116,7 +119,10 @@ await yargs(process.argv.slice(2))
     },
     async (args) => {
       if (!(args.user && args.password)) throw "invalid input"
-      await loginUser(client, args.user as string, args.password as string)
+      const user = await loginUser(client, args.user as string, args.password as string)
+      if (user) {
+        await verifyUserFiles(client, user._id.toString(), ROOT_DIR)
+      }
     }
   )
   .command('logout', 'logout user',
@@ -137,6 +143,12 @@ await yargs(process.argv.slice(2))
     (args)=>{
     },
     async (args) => {
+      if (root) {
+        fs.readdirSync(pwd, {withFileTypes: true}).forEach((file) => {
+          console.log(file.isDirectory() ? "/" + file.name : file.name)
+        })
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
@@ -158,6 +170,16 @@ await yargs(process.argv.slice(2))
       })
     },
     async (args) => {
+      if (root) {
+        const cwd = process.cwd()
+        process.chdir(path.join(pwd, args.dir as string))
+        const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
+        if (newDirectory) {
+          fs.writeFileSync(cwd+'/pwd', newDirectory)
+          console.log(newDirectory)
+        }
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
@@ -217,6 +239,15 @@ await yargs(process.argv.slice(2))
       const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       if (!fs.existsSync(encryptedFile) && args.file) {
         fs.writeFileSync(encryptedFile, '')
+        await createMetadata(client, {
+          name: encryptedFile,
+          integrity: hashFileIntegrity(''),
+          owner: userInfo._id.toString(),
+          groups: [],
+          userPermissions: [true, true],
+          groupPermissions: [false, false],
+          allPermissions: [false, false]
+        })
       } else {
         console.log("File already exists")
       }
@@ -269,6 +300,15 @@ await yargs(process.argv.slice(2))
       if (fs.existsSync(encryptedFile) && args.file) {
         const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
         fs.writeFileSync(encryptedFile, encryptedFileData)
+        await updateMetadata(client, encryptedFile, {
+          name: encryptedFile,
+          integrity: hashFileIntegrity(encryptedFileData),
+          owner: userInfo._id.toString(),
+          groups: [],
+          userPermissions: [true, true],
+          groupPermissions: [false, false],
+          allPermissions: [false, false]
+        })
       } else {
         console.log("File does not exist")
       }
@@ -296,51 +336,19 @@ await yargs(process.argv.slice(2))
       const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
+        const data = fs.readFileSync(encryptedFile).toString()
         fs.renameSync(encryptedFile, newEncryptedFile)
+        await updateMetadata(client, encryptedFile, {
+          name: newEncryptedFile,
+          integrity: hashFileIntegrity(data),
+          owner: userInfo._id.toString(),
+          groups: [],
+          userPermissions: [true, true],
+          groupPermissions: [false, false],
+          allPermissions: [false, false]
+        })
       }
     })
-  // .command('encrypt [file]', 'encrypt a file', 
-  //   (yargs) => {
-  //     yargs.positional('file', {
-  //       describe: 'file to encrypt',
-  //       default: '',
-  //       type: 'string'
-  //     });
-  //   },
-  //   (args) => {
-  //     process.chdir(path.join(pwd))
-  //     if (fs.existsSync(args.file as string)) {
-  //       const fileContent = fs.readFileSync(args.file);
-  //       const encryptedContent = encrypt(fileContent);
-  //       fs.writeFileSync(args.file, encryptedContent);
-  //       console.log(`File encrypted: ${args.file}`);
-  //     } else {
-  //       console.log('File not found');
-  //     }
-  //   })
-  //   .command('decrypt [file]', 'decrypt a file',
-  //   (yargs) => {
-  //     yargs.positional('file', {
-  //       describe: 'file to decrypt',
-  //       type: 'string',
-  //       demandOption: true,
-  //     });
-  //   },
-  //   (args) => {
-  //     process.chdir(path.join(pwd))
-  //     if (fs.existsSync(args.file)) {
-  //       const fileContent = fs.readFileSync(args.file);
-  //       try {
-  //         const decryptedContent = decrypt(fileContent);
-  //         fs.writeFileSync(args.file, decryptedContent);
-  //         console.log(`File decrypted: ${args.file}`);
-  //       } catch (error) {
-  //         console.log('Failed to decrypt file. It may have been altered or is not encrypted.');
-  //       }
-  //     } else {
-  //       console.log('File not found');
-  //     }
-  //   })
   .recommendCommands()
   .strictCommands()
   .demandCommand()
