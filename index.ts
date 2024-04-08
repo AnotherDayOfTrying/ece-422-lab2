@@ -500,6 +500,7 @@ await yargs(process.argv.slice(2))
       //read and unencrpyt file
       const fileName = decrypt(Buffer.from(encryptedFile, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
       let fileData = ''
+      console.log(encryptedFile)
       if (fs.existsSync(encryptedFile)) {
         const file = fs.readFileSync(encryptedFile).toString()
         fileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
