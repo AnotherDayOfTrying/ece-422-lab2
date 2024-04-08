@@ -170,6 +170,11 @@ await yargs(process.argv.slice(2))
       })
     },
     async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
       if (root) {
         const cwd = process.cwd()
         process.chdir(path.join(pwd, args.dir as string))
@@ -178,11 +183,6 @@ await yargs(process.argv.slice(2))
           fs.writeFileSync(cwd+'/pwd', newDirectory)
           console.log(newDirectory)
         }
-        return
-      }
-      const userInfo = await fetchUser(client, user)
-      if (!userInfo) {
-        console.error("No user is logged in...")
         return
       }
       const cwd = process.cwd()
