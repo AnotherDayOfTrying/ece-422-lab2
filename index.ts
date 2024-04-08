@@ -399,6 +399,13 @@ await yargs(process.argv.slice(2))
       // recalc integrity
     }
   )
+  .command('whoami', 'display which user you are',
+    () => {},
+    async () => {
+      const _user = await fetchUser(client, user)
+      console.log(_user?.username)
+    }
+  )
   .recommendCommands()
   .strictCommands()
   .demandCommand()
