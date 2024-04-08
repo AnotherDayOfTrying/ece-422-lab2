@@ -10,12 +10,12 @@ export const generateKey = (password: string): string => {
     return crypto.createHash('sha256').update(password).digest('base64').substr(0, 32);
 }
 
-export const generateIV = (): string => {
-    return crypto.randomBytes(16).toString('hex');
+export const generateIV = (): Buffer => {
+    return crypto.randomBytes(16);
 }
 
-export const encrypt = (buffer: Buffer, secretKey: string, iv: string): Buffer => {
-  const cipher = crypto.createCipheriv(algorithm, secretKey, Buffer.from(iv, 'hex'));
+export const encrypt = (buffer: Buffer, secretKey: string, iv: Buffer): Buffer => {
+  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
   const result = Buffer.concat([Buffer.from(iv), cipher.update(buffer), cipher.final()]);
   return result;
 };
