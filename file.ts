@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from "mongodb";
 import { User } from "./admin";
 import fs from "fs"
-import { hashFileIntegrity } from "./encryption";
+import { decrypt, hashFileIntegrity } from "./encryption";
 import path from "path";
 import { fetchUser } from "./auth";
 
@@ -74,17 +74,17 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
     }
     const pwd = path.join(root_dir, _user.username)
     await Promise.all(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).map(async (file) => {
-        // if (!file.isDirectory()) {
-            const filename = file.name.split('/')
-            const metadata = await fetchMetadata(client, filename[filename.length - 1])
-            if (!metadata) { // no metadata means filename has been modified
-                console.log(`File ${path.join(pwd, file.name)} has been modified!`)
-            } else {
-                const data = fs.readFileSync(path.join(pwd, file.name)).toString()
-                if (metadata.integrity !== hashFileIntegrity(data)) {
-                    console.error(`File ${path.join(pwd, file.name)} has been modified!`)
-                }
+        const filename = file.name.split('/')
+        const metadata = await fetchMetadata(client, filename[filename.length - 1])
+        if (!metadata) { // no metadata means filename has been modified
+            console.error(`File ${path.join(pwd, file.name)} has been modified!`)
+        } else {
+            const data = fs.readFileSync(path.join(pwd, file.name)).toString()
+            if (metadata.integrity !== hashFileIntegrity(data)) {
+                const fileName = decrypt(Buffer.from(file.name, 'hex'), _user.key, Buffer.from(_user.iv, 'hex')).toString()
+
+                console.error(`File ${path.join(pwd, fileName)} has been modified!`)
             }
-        // }
+        }
     }))
 }
