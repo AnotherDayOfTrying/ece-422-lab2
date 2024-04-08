@@ -1,43 +1,129 @@
 #!/usr/bin/env bun
-import os from "os"
-import sqlite3 from "sqlite3";
-import yargs, { string } from "yargs"
+import yargs from "yargs"
 import fs from "fs"
-import { cwd } from "process";
 import path from "path";
-import crypto from 'crypto';
+import { MongoClient, ServerApiVersion } from "mongodb";
+import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
+import { loginUser, logoutUser, verifyAdmin } from "./auth";
 
-const algorithm = 'aes-256-ctr';
-const password = 'password'; 
-const secretKey = crypto.createHash('sha256').update(String(password)).digest('base64').substr(0, 32);
-const iv = crypto.randomBytes(16);
+const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
-const encrypt = (buffer: Buffer): Buffer => {
-  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
-  const result = Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
-  return result;
-};
-
-const decrypt = (encrypted: Buffer): Buffer => {
-  const iv = encrypted.slice(0, 16);
-  const data = encrypted.slice(16);
-  const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
-  const result = Buffer.concat([decipher.update(data), decipher.final()]);
-  return result;
-};
-
-let db = new sqlite3.Database('./test.db', (err) => {
-  if (err) {
-    console.error(err.message);
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
-});
+})
+
+// connect to db
+await client.connect();
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd")
 
-yargs(process.argv.slice(2))
+await yargs(process.argv.slice(2))
   .env('sfs')
   .scriptName('sfs')
   .usage('Usage: $0 <command> [options]')
+  .command('admin', 'admin commmands',
+    (yargs) => {
+      yargs
+        .option('adminpass', {
+          demandOption: true,
+        })
+        .middleware((yargs) => {
+            if (!verifyAdmin(yargs.adminpass as string)) throw "incorrect admin password"
+        })
+        .command('createUser [user] [pass]', "create a new user",
+          (yargs) => {
+            yargs
+              .positional('user', {
+                type: 'string',
+                demandOption: true,
+              })
+              .positional('pass', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.pass)) throw "invalid inputs"
+            await createUser(client, args.user as string, args.pass as string, '')
+            console.log(`Created User: ${args.user}`)
+          }
+        )
+        .command('createGroup [name]', "create new group",
+          (yargs) => {
+            yargs
+              .positional('name', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!args.name) throw "invalid inputs"
+            await createGroup(client, args.name as string)
+            console.log(`Created Group: ${args.name}`)
+          }
+        )
+        .command('addToGroup [user] [group]', "add user to group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await addUserToGroup(client, args.user as string, args.group as string)
+            console.log(`Added ${args.user} to group ${args.group}`)
+          }
+        )
+        .command('removeFromGroup [user] [group]', "remove user from group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await removeUserFromGroup(client, args.user as string, args.group as string)
+            console.log(`Removed ${args.user} from group ${args.group}`)
+          }
+        )
+        .demandCommand()
+    }
+  )
+  .command('login [user] [password]', 'login to user',
+    (yargs) => {
+      yargs
+        .positional('user', {
+          demandOption: true
+        })
+        .positional('password', {
+          demandOption: true
+        })
+    },
+    async (args) => {
+      if (!(args.user && args.password)) throw "invalid input"
+      await loginUser(client, args.user as string, args.password as string)
+      console.log(`Logged in as ${args.user}`)
+    }
+  )
+  .command('logout', 'logout user',
+    () => {},
+    () => {
+      logoutUser()
+      console.log(`Logged out...`)
+    }
+  )
   .command('pwd', 'see what directory you are currently in',
     (args)=>{
     },
@@ -153,51 +239,54 @@ yargs(process.argv.slice(2))
         fs.renameSync(args.file as string, args.rfile as string)
       }
     })
-  .command('encrypt [file]', 'encrypt a file', 
-    (yargs) => {
-      yargs.positional('file', {
-        describe: 'file to encrypt',
-        default: '',
-        type: 'string'
-      });
-    },
-    (args) => {
-      process.chdir(path.join(pwd))
-      if (fs.existsSync(args.file as string)) {
-        const fileContent = fs.readFileSync(args.file);
-        const encryptedContent = encrypt(fileContent);
-        fs.writeFileSync(args.file, encryptedContent);
-        console.log(`File encrypted: ${args.file}`);
-      } else {
-        console.log('File not found');
-      }
-    })
-    .command('decrypt [file]', 'decrypt a file',
-    (yargs) => {
-      yargs.positional('file', {
-        describe: 'file to decrypt',
-        type: 'string',
-        demandOption: true,
-      });
-    },
-    (args) => {
-      process.chdir(path.join(pwd))
-      if (fs.existsSync(args.file)) {
-        const fileContent = fs.readFileSync(args.file);
-        try {
-          const decryptedContent = decrypt(fileContent);
-          fs.writeFileSync(args.file, decryptedContent);
-          console.log(`File decrypted: ${args.file}`);
-        } catch (error) {
-          console.log('Failed to decrypt file. It may have been altered or is not encrypted.');
-        }
-      } else {
-        console.log('File not found');
-      }
-    })
+  // .command('encrypt [file]', 'encrypt a file', 
+  //   (yargs) => {
+  //     yargs.positional('file', {
+  //       describe: 'file to encrypt',
+  //       default: '',
+  //       type: 'string'
+  //     });
+  //   },
+  //   (args) => {
+  //     process.chdir(path.join(pwd))
+  //     if (fs.existsSync(args.file as string)) {
+  //       const fileContent = fs.readFileSync(args.file);
+  //       const encryptedContent = encrypt(fileContent);
+  //       fs.writeFileSync(args.file, encryptedContent);
+  //       console.log(`File encrypted: ${args.file}`);
+  //     } else {
+  //       console.log('File not found');
+  //     }
+  //   })
+  //   .command('decrypt [file]', 'decrypt a file',
+  //   (yargs) => {
+  //     yargs.positional('file', {
+  //       describe: 'file to decrypt',
+  //       type: 'string',
+  //       demandOption: true,
+  //     });
+  //   },
+  //   (args) => {
+  //     process.chdir(path.join(pwd))
+  //     if (fs.existsSync(args.file)) {
+  //       const fileContent = fs.readFileSync(args.file);
+  //       try {
+  //         const decryptedContent = decrypt(fileContent);
+  //         fs.writeFileSync(args.file, decryptedContent);
+  //         console.log(`File decrypted: ${args.file}`);
+  //       } catch (error) {
+  //         console.log('Failed to decrypt file. It may have been altered or is not encrypted.');
+  //       }
+  //     } else {
+  //       console.log('File not found');
+  //     }
+  //   })
   .recommendCommands()
   .strictCommands()
   .demandCommand()
   .help('h')
   .alias('h', 'help')
   .parse()
+
+//testing
+process.exit()
