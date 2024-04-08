@@ -242,7 +242,7 @@ await yargs(process.argv.slice(2))
         fs.writeFileSync(encryptedFile, '')
         await createMetadata(client, {
           name: encryptedFile,
-          integrity: hashFileIntegrity(encryptedFile, ''),
+          integrity: hashFileIntegrity(''),
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
@@ -303,7 +303,7 @@ await yargs(process.argv.slice(2))
         fs.writeFileSync(encryptedFile, encryptedFileData)
         await updateMetadata(client, {
           name: encryptedFile,
-          integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
+          integrity: hashFileIntegrity(encryptedFileData),
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
@@ -337,13 +337,13 @@ await yargs(process.argv.slice(2))
       const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const data = fs.readFileSync(encryptedFile).toString('utf-8')
+        const data = fs.readFileSync(encryptedFile).toString()
         console.log(data)
         console.log(newEncryptedFile)
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, {
           name: newEncryptedFile,
-          integrity: hashFileIntegrity(newEncryptedFile, data),
+          integrity: hashFileIntegrity(data),
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
