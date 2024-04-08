@@ -165,10 +165,13 @@ await yargs(process.argv.slice(2))
       }
       const cwd = process.cwd()
       process.chdir(path.join(pwd))
-      if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/))
+      if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
         process.chdir(path.join(pwd, args.dir as string))
-      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      process.chdir(path.join(pwd, encryptedDirectory))
+      } else {
+        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        console.log(encryptedDirectory)
+        process.chdir(path.join(pwd, encryptedDirectory))
+      }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
       if (newDirectory) {
         fs.writeFileSync(cwd+'/pwd', newDirectory)
