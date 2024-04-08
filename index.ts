@@ -6,7 +6,7 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
-import { createMetadata, updateMetadata, verifyUserFiles } from "./file";
+import { createMetadata, deleteMetadata, updateMetadata, verifyUserFiles } from "./file";
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -258,6 +258,29 @@ await yargs(process.argv.slice(2))
           groupPermissions: [true, true],
           allPermissions: [false, false]
         })
+      } else {
+        console.log("File already exists")
+      }
+    })
+  .command('rm [file]', 'remove file',
+    (yargs) => {
+      yargs.positional('file', {
+        describe: 'file to create',
+        default: '',
+        type: 'string'
+      })
+    },
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+      process.chdir(path.join(pwd))
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      if (!fs.existsSync(encryptedFile) && args.file) {
+        fs.unlinkSync(encryptedFile)
+        await deleteMetadata(client, encryptedFile)
       } else {
         console.log("File already exists")
       }

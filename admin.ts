@@ -36,10 +36,15 @@ export const createGroup = async (client: MongoClient, group: string, key: strin
 }
 
 export const addUserToGroup = async (client: MongoClient, user: string, group: string) => {
-    await client.db('sfs').collection<User>('users').updateOne(
+    const _user = await client.db('sfs').collection<User>('users').updateOne(
         {username: user},
         {$addToSet: {"groups": group}}
     )
+
+    if (!_user) {
+        console.log(`No user found with name ${user}`)
+        return
+    }
     await client.db('sfs').collection<Group>('groups').updateOne(
         {name: group},
         {$addToSet: {"users": user}}

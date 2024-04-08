@@ -35,6 +35,10 @@ export const updateMetadata = async (client: MongoClient, name: string, metadata
     })
 }
 
+export const deleteMetadata = async (client: MongoClient, name: string) => {
+    await client.db('sfs').collection<Metadata>('metadata').deleteOne({name: name})
+}
+
 export const checkReadLevel = async () => {
     
 }
@@ -50,8 +54,6 @@ export const checkPermissions = async (client: MongoClient, userId: string, name
     const userPermissions = metadata.userPermissions
     const groupPermissions = metadata.groupPermissions
     const allPermissions = metadata.allPermissions
-
-
 }
 
 export const setPermissions = async (client: MongoClient, name: string, permissions: PermissionsInput) => {
