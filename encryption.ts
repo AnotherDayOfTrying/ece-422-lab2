@@ -25,3 +25,7 @@ export const decrypt = (encrypted: Buffer, secretKey: string, iv: Buffer): Buffe
   const result = Buffer.concat([decipher.update(encrypted), decipher.final()]);
   return result;
 };
+
+export const hashFileIntegrity = (name: string, data: string) => {
+  return crypto.createHash('sha256').update(name).update(data).digest('hex')
+}
