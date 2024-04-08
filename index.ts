@@ -116,7 +116,6 @@ await yargs(process.argv.slice(2))
     async (args) => {
       if (!(args.user && args.password)) throw "invalid input"
       await loginUser(client, args.user as string, args.password as string)
-      console.log(`Logged in as ${args.user}`)
     }
   )
   .command('logout', 'logout user',
