@@ -40,7 +40,7 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
             console.log(hashFileIntegrity(file.name, data))
             console.log(file)
             console.log(metadata)
-            if (metadata?.integrity !== hashFileIntegrity(file.name, data)) {
+            if (metadata?.integrity !== hashFileIntegrity(filename[filename.length - 1], data)) {
                 console.error(`File ${file.path} has been modified!`)
             }
         }
