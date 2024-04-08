@@ -34,12 +34,12 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
     const pwd = path.join(root_dir, _user.username)
     await Promise.all(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).map(async (file) => {
         if (!file.isDirectory()) {
-            const metadata = await fetchMetadata(client, file.name)
+            const filename = file.name.split('/')
+            const metadata = await fetchMetadata(client, filename[filename.length - 1])
             const data = fs.readFileSync(path.join(pwd, file.name)).toString()
             console.log(hashFileIntegrity(file.name, data))
             console.log(file)
             console.log(metadata)
-            console.log(data)
             if (metadata?.integrity !== hashFileIntegrity(file.name, data)) {
                 console.error(`File ${file.path} has been modified!`)
             }
