@@ -166,6 +166,7 @@ await yargs(process.argv.slice(2))
       const cwd = process.cwd()
       process.chdir(path.join(pwd))
       if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
+        console.log(path.join(pwd, args.dir as string))
         process.chdir(path.join(pwd, args.dir as string))
       } else {
         const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
