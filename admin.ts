@@ -1,4 +1,5 @@
 import { MongoClient } from "mongodb";
+import { encrypt, generateIV, generateKey } from "./encryption";
 
 
 export interface User {
@@ -12,11 +13,12 @@ export interface Group {
     users: string[];
 }
 
-export const createUser = async (client: MongoClient, user: string, password: string, key: string) => {
+export const createUser = async (client: MongoClient, user: string, encryptedPassword: string, key: string, iv: string) => {
     await client.db('sfs').collection('users').insertOne({
         username: user,
-        password: password, //!!! TODO: encrypt password
+        password: encryptedPassword, //!!! TODO: encrypt password
         key: key,
+        iv: iv,
     })
 }
 

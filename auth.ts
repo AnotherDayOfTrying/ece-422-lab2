@@ -1,6 +1,7 @@
 import fs from 'fs'
 import type { MongoClient } from 'mongodb'
 import type { User } from './admin'
+import { decrypt } from './encryption'
 
 export const verifyAdmin = (password: string) => {
     return password === process.env.ADMIN_PASSWORD
@@ -8,7 +9,7 @@ export const verifyAdmin = (password: string) => {
 
 export const loginUser = async (client: MongoClient, user: string, password: string) => {
     const _user = await client.db('sfs').collection<User>('users').findOne({username: user});
-    if (_user && _user.password === password) {
+    if (_user && decrypt(_user.password, process.env.ADMIN_PASSWORD || '').toString() === password) {
         fs.writeFileSync('./user', _user._id.toString());
     } else {
         console.log("Unable to authenticate...")
