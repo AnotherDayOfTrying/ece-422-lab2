@@ -23,7 +23,7 @@ export const createUser = async (client: MongoClient, user: string, password: st
 export const createGroup = async (client: MongoClient, group: string) => {
     await client.db('sfs').collection('groups').insertOne({
         name: group,
-        users: [],
+        users: ['tes1', 'test2'],
     })
 }
 
