@@ -164,18 +164,19 @@ await yargs(process.argv.slice(2))
         return
       }
       const cwd = process.cwd()
+      let directory = ''
       if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
-        console.log(path.join(pwd, args.dir as string))
-        process.chdir(path.join(pwd, args.dir as string))
+        directory = path.join(pwd, args.dir as string)
+        process.chdir(directory)
       } else {
         const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-        console.log(path.join(pwd, encryptedDirectory))
-        process.chdir(path.join(pwd, encryptedDirectory))
+        directory = path.join(pwd, encryptedDirectory)
+        process.chdir(directory)
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
       if (newDirectory) {
         fs.writeFileSync(cwd+'/pwd', newDirectory)
-        console.log(newDirectory)
+        console.log(directory)
       }
     })
   .command('mkdir [dir]', 'make a new subdirectory',
