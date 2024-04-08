@@ -176,6 +176,7 @@ await yargs(process.argv.slice(2))
           fs.writeFileSync(cwd+'/pwd', newDirectory)
           console.log(newDirectory)
         }
+        return
       }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
