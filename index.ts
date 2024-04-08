@@ -278,11 +278,11 @@ await yargs(process.argv.slice(2))
       }
       process.chdir(path.join(pwd))
       const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      if (!fs.existsSync(encryptedFile) && args.file) {
+      if (fs.existsSync(encryptedFile) && args.file) {
         fs.unlinkSync(encryptedFile)
         await deleteMetadata(client, encryptedFile)
       } else {
-        console.log("File already exists")
+        console.log("File does not exist")
       }
     })
   .command('cat [file]', 'read a file',
