@@ -49,8 +49,8 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
-            const encryptedPassword = encrypt(Buffer.from(args.pass as string), process.env.ADMIN_PASSWORD!, process.env.ADMIN_IV!)
-            await createUser(client, args.user as string, args.pass as string, generateKey(args.pass as string), generateIV())
+            const encryptedPassword = encrypt(Buffer.from(args.pass as string), process.env.ADMIN_PASSWORD!, Buffer.from(process.env.ADMIN_IV!))
+            await createUser(client, args.user as string, encryptedPassword.toString(), generateKey(args.pass as string), generateIV().toString())
             console.log(`Created User: ${args.user}`)
           }
         )
