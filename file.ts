@@ -31,7 +31,8 @@ export const verifyUserFiles = async (client: MongoClient, user: string, pwd: st
     console.log(pwd)
     await Promise.all(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).map(async (file) => {
         if (!file.isDirectory()) {
-            const metadata = await fetchMetadata(client, file.name);
+            const metadata = await fetchMetadata(client, file.name)
+            console.log(file.path)
             const data = fs.readFileSync(file.path).toString()
             console.log(file)
             console.log(metadata)
