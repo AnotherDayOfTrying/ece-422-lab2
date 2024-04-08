@@ -203,7 +203,7 @@ await yargs(process.argv.slice(2))
         console.log(directory)
       }
     })
-  .command('mkdir [dir] -r (u|g|a) -w (u|g|a)', 'make a new subdirectory',
+  .command('mkdir [dir] [-r (u|g|a) -w (u|g|a)]', 'make a new subdirectory',
     (yargs)=>{
       yargs.positional('dir', {
         describe: 'directory to create',
