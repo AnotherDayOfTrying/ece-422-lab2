@@ -55,7 +55,7 @@ await yargs(process.argv.slice(2))
             if (!(args.user && args.pass)) throw "invalid inputs"
             const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
             await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'))
-            fs.mkdirSync(ROOT_DIR, args.user) // create new folder for user
+            fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
         )
