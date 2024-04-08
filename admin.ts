@@ -6,30 +6,40 @@ export interface User {
     password: string;
     key: string;
     iv: string;
+    groups: string[];
 }
 
 export interface Group {
     name: string;
+    key: string;
+    iv: string;
     users: string[];
 }
 
-export const createUser = async (client: MongoClient, user: string, encryptedPassword: string, key: string, iv: string) => {
-    await client.db('sfs').collection('users').insertOne({
+export const createUser = async (client: MongoClient, user: string, encryptedPassword: string, key: string, iv: string, groups: string[]) => {
+    await client.db('sfs').collection<User>('users').insertOne({
         username: user,
         password: encryptedPassword,
         key: key,
         iv: iv,
+        groups: groups
     })
 }
 
-export const createGroup = async (client: MongoClient, group: string) => {
-    await client.db('sfs').collection('groups').insertOne({
+export const createGroup = async (client: MongoClient, group: string, key: string, iv: string, users: string[]) => {
+    await client.db('sfs').collection<Group>('groups').insertOne({
         name: group,
-        users: [],
+        key: key,
+        iv: iv,
+        users: users,
     })
 }
 
 export const addUserToGroup = async (client: MongoClient, user: string, group: string) => {
+    await client.db('sfs').collection<User>('users').updateOne(
+        {username: user},
+        {$addToSet: {"groups": group}}
+    )
     await client.db('sfs').collection<Group>('groups').updateOne(
         {name: group},
         {$addToSet: {"users": user}}
@@ -37,5 +47,6 @@ export const addUserToGroup = async (client: MongoClient, user: string, group: s
 }
 
 export const removeUserFromGroup = async (client: MongoClient, user: string, group: string) => {
+    await client.db('sfs').collection<User>('users').updateOne({username: user}, {$pull: {"groups": group}})
     await client.db('sfs').collection<Group>('groups').updateOne({name: group}, {$pull: {"users": user}})
 }

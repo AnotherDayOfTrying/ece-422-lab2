@@ -53,7 +53,7 @@ await yargs(process.argv.slice(2))
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
             const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
-            await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'))
+            await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'), [])
             fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
@@ -68,7 +68,7 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!args.name) throw "invalid inputs"
-            await createGroup(client, args.name as string)
+            await createGroup(client, args.name as string, generateKey(args.name as string), generateIV().toString('hex'), [])
             console.log(`Created Group: ${args.name}`)
           }
         )
@@ -176,6 +176,7 @@ await yargs(process.argv.slice(2))
         return
       }
       if (root) {
+        // TODO: check group permissions before allowing to check a user
         const cwd = process.cwd()
         process.chdir(path.join(pwd, args.dir as string))
         const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
@@ -217,6 +218,15 @@ await yargs(process.argv.slice(2))
       const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       if (!fs.existsSync(encryptedDirectory) && args.dir) {
         fs.mkdirSync(encryptedDirectory)
+        await createMetadata(client, {
+          name: encryptedDirectory,
+          integrity: hashFileIntegrity(''),
+          owner: userInfo._id.toString(),
+          groups: [],
+          userPermissions: [true, true],
+          groupPermissions: [true, true],
+          allPermissions: [false, false]
+        })
       } else {
         console.log("Directory already exists")
       }
@@ -245,7 +255,7 @@ await yargs(process.argv.slice(2))
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
-          groupPermissions: [false, false],
+          groupPermissions: [true, true],
           allPermissions: [false, false]
         })
       } else {
@@ -306,7 +316,7 @@ await yargs(process.argv.slice(2))
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
-          groupPermissions: [false, false],
+          groupPermissions: [true, true],
           allPermissions: [false, false]
         })
       } else {
@@ -344,11 +354,28 @@ await yargs(process.argv.slice(2))
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
-          groupPermissions: [false, false],
+          groupPermissions: [true, true],
           allPermissions: [false, false]
         })
       }
     })
+  .command('changePermissions [file] [permissionstring]', 'Change permission of a file',
+    (yargs) => {
+      yargs
+        .positional('file', {
+          demandOption: true
+        })
+        .positional('permissionstring', {
+          demandOption: true
+        })
+    },
+    async (args) => {
+      if (!(args.file && args.permissionstring)) return
+      // check if user is owner
+      // reencrypt data
+      // recalc integrity
+    }
+  )
   .recommendCommands()
   .strictCommands()
   .demandCommand()

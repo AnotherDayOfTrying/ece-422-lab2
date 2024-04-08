@@ -3,13 +3,20 @@ import { User } from "./admin";
 import fs from "fs"
 import { hashFileIntegrity } from "./encryption";
 import path from "path";
+import { fetchUser } from "./auth";
 
 export interface Metadata {
     name: string; // encrypted name of file or directory
     integrity: string; // integrity hash
     owner: string;
     groups: string[];
-    userPermissions: boolean[];
+    userPermissions: boolean[]; // [0] = read; [1] = write
+    groupPermissions: boolean[];
+    allPermissions: boolean[];
+}
+
+export interface PermissionsInput {
+    userPermissions: boolean[]; // [0] = read; [1] = write
     groupPermissions: boolean[];
     allPermissions: boolean[];
 }
@@ -26,6 +33,36 @@ export const updateMetadata = async (client: MongoClient, name: string, metadata
     await client.db('sfs').collection<Metadata>('metadata').updateOne({name: name}, {
         $set: metadata
     })
+}
+
+export const checkReadLevel = async () => {
+    
+}
+
+// return [read, write, level]
+export const checkPermissions = async (client: MongoClient, userId: string, name: string) => {
+    const metadata = await fetchMetadata(client, name)
+    if (!metadata) return [false, false]
+    const user = await fetchUser(client, userId)
+    if (!user) return metadata.allPermissions
+    let read = false
+    let write = false
+    const userPermissions = metadata.userPermissions
+    const groupPermissions = metadata.groupPermissions
+    const allPermissions = metadata.allPermissions
+
+
+}
+
+export const setPermissions = async (client: MongoClient, name: string, permissions: PermissionsInput) => {
+    await client.db('sfs').collection<Metadata>('metadata').updateOne(
+        {name: name},
+        {$set: {
+            userPermissions: permissions.userPermissions,
+            groupPermissions: permissions.groupPermissions,
+            allPermissions: permissions.allPermissions,
+        }}
+    )
 }
 
 export const verifyUserFiles = async (client: MongoClient, user: string, root_dir: string) => {
