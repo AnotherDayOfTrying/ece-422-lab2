@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@types/node": "^20.12.5",
+    "mongodb": "^6.5.0",
     "sqlite3": "^5.1.7",
     "yargs": "^17.7.2"
   }

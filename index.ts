@@ -1,24 +1,129 @@
 #!/usr/bin/env bun
-import os from "os"
-import sqlite3 from "sqlite3";
-import yargs, { string } from "yargs"
+import yargs from "yargs"
 import fs from "fs"
-import { cwd } from "process";
 import path from "path";
+import { MongoClient, ServerApiVersion } from "mongodb";
+import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
+import { loginUser, logoutUser, verifyAdmin } from "./auth";
 
+const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
-let db = new sqlite3.Database('./test.db', (err) => {
-  if (err) {
-    console.error(err.message);
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
-});
+})
+
+// connect to db
+await client.connect();
 
 const pwd = "./file_system/" + fs.readFileSync("./pwd")
 
-yargs(process.argv.slice(2))
+await yargs(process.argv.slice(2))
   .env('sfs')
   .scriptName('sfs')
   .usage('Usage: $0 <command> [options]')
+  .command('admin', 'admin commmands',
+    (yargs) => {
+      yargs
+        .option('adminpass', {
+          demandOption: true,
+        })
+        .middleware((yargs) => {
+            if (!verifyAdmin(yargs.adminpass as string)) throw "incorrect admin password"
+        })
+        .command('createUser [user] [pass]', "create a new user",
+          (yargs) => {
+            yargs
+              .positional('user', {
+                type: 'string',
+                demandOption: true,
+              })
+              .positional('pass', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.pass)) throw "invalid inputs"
+            await createUser(client, args.user as string, args.pass as string, '')
+            console.log(`Created User: ${args.user}`)
+          }
+        )
+        .command('createGroup [name]', "create new group",
+          (yargs) => {
+            yargs
+              .positional('name', {
+                type: 'string',
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!args.name) throw "invalid inputs"
+            await createGroup(client, args.name as string)
+            console.log(`Created Group: ${args.name}`)
+          }
+        )
+        .command('addToGroup [user] [group]', "add user to group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await addUserToGroup(client, args.user as string, args.group as string)
+            console.log(`Added ${args.user} to group ${args.group}`)
+          }
+        )
+        .command('removeFromGroup [user] [group]', "remove user from group",
+          (yargs) => {
+            yargs.
+              positional('user', {
+                demandOption: true,
+              })
+              .positional('group', {
+                demandOption: true,
+              })
+          },
+          async (args) => {
+            if (!(args.user && args.group)) throw "invalid inputs"
+            await removeUserFromGroup(client, args.user as string, args.group as string)
+            console.log(`Removed ${args.user} from group ${args.group}`)
+          }
+        )
+        .demandCommand()
+    }
+  )
+  .command('login [user] [password]', 'login to user',
+    (yargs) => {
+      yargs
+        .positional('user', {
+          demandOption: true
+        })
+        .positional('password', {
+          demandOption: true
+        })
+    },
+    async (args) => {
+      if (!(args.user && args.password)) throw "invalid input"
+      await loginUser(client, args.user as string, args.password as string)
+      console.log(`Logged in as ${args.user}`)
+    }
+  )
+  .command('logout', 'logout user',
+    () => {},
+    () => {
+      logoutUser()
+      console.log(`Logged out...`)
+    }
+  )
   .command('pwd', 'see what directory you are currently in',
     (args)=>{
     },
@@ -140,3 +245,6 @@ yargs(process.argv.slice(2))
   .help('h')
   .alias('h', 'help')
   .parse()
+
+//testing
+process.exit()
