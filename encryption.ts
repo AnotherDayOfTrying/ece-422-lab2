@@ -16,14 +16,12 @@ export const generateIV = (): Buffer => {
 
 export const encrypt = (buffer: Buffer, secretKey: string, iv: Buffer): Buffer => {
   const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
-  const result = Buffer.concat([Buffer.from(iv), cipher.update(buffer), cipher.final()]);
+  const result = Buffer.concat([cipher.update(buffer), cipher.final()]);
   return result;
 };
 
-export const decrypt = (encrypted: Buffer, secretKey: string): Buffer => {
-  const iv = encrypted.slice(0, 16);
-  const data = encrypted.slice(16);
+export const decrypt = (encrypted: Buffer, secretKey: string, iv: Buffer): Buffer => {
   const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
-  const result = Buffer.concat([decipher.update(Buffer.from(data)), decipher.final()]);
+  const result = Buffer.concat([decipher.update(encrypted), decipher.final()]);
   return result;
 };

@@ -145,7 +145,7 @@ await yargs(process.argv.slice(2))
       fs.readdirSync(pwd, {
         withFileTypes: true
       }).forEach((file) => {
-        const fileName = decrypt(Buffer.from(file.name, 'hex'), userInfo.key)
+        const fileName = decrypt(Buffer.from(file.name, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex'))
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       })
     })
