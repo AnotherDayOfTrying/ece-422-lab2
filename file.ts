@@ -2,6 +2,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import { User } from "./admin";
 import fs from "fs"
 import { hashFileIntegrity } from "./encryption";
+import path from "path";
 
 export interface Metadata {
     name: string; // encrypted name of file or directory
@@ -32,8 +33,7 @@ export const verifyUserFiles = async (client: MongoClient, user: string, pwd: st
     await Promise.all(fs.readdirSync(pwd, {withFileTypes: true, recursive: true}).map(async (file) => {
         if (!file.isDirectory()) {
             const metadata = await fetchMetadata(client, file.name)
-            console.log(file.path)
-            const data = fs.readFileSync(file.path).toString()
+            const data = fs.readFileSync(path.join(pwd, file.name)).toString()
             console.log(file)
             console.log(metadata)
             console.log(data)
