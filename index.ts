@@ -340,8 +340,8 @@ await yargs(process.argv.slice(2))
         const data = fs.readFileSync(encryptedFile).toString('utf-8')
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, {
-          name: encryptedFile,
-          integrity: hashFileIntegrity(encryptedFile, data),
+          name: newEncryptedFile,
+          integrity: hashFileIntegrity(newEncryptedFile, data),
           owner: userInfo._id.toString(),
           groups: [],
           userPermissions: [true, true],
