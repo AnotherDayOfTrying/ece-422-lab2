@@ -9,6 +9,11 @@ import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity, hashWithSalt } from "./encryption";
 import { createMetadata, deleteMetadata, updateMetadata, verifyUserFiles } from "./file";
 
+const salt = crypto.randomBytes(16).toString('hex');
+console.log(hashWithSalt('maUnS6OuUe0UFoth', salt));
+console.log(salt)
+
+
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
 const client = new MongoClient(uri, {

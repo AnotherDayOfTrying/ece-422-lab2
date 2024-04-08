@@ -1,9 +1,6 @@
 import crypto from 'crypto';
 
 const algorithm = 'aes-256-ctr';
-// const password = 'password'; 
-// const secretKey = crypto.createHash('sha256').update(String(password)).digest('base64').substr(0, 32);
-// const iv = crypto.randomBytes(16);
 
 
 export const generateKey = (password: string): string => {
