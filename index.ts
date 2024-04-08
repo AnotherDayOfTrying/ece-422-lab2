@@ -122,9 +122,7 @@ await yargs(process.argv.slice(2))
       if (!(args.user && args.password)) throw "invalid input"
       const user = await loginUser(client, args.user as string, args.password as string)
       if (user) {
-        if (!await verifyUserFiles(client, user._id.toString(), path.join(ROOT_DIR, user.username))) {
-          console.log("INTEGRITY VIOLATED!!")
-        }
+        await verifyUserFiles(client, user._id.toString(), path.join(ROOT_DIR, user.username))
       }
     }
   )
