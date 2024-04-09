@@ -309,7 +309,7 @@ await yargs(process.argv.slice(2))
       }
 
       process.chdir(path.join(pwd))
-      const encryptedDirectory = await (await encryptWithPermission(client, Buffer.from(args.dir as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      const encryptedDirectory = (await encryptWithPermission(client, Buffer.from(args.dir as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
       if (!fs.existsSync(encryptedDirectory) && args.dir) {
         fs.mkdirSync(encryptedDirectory)
         await createMetadata(client, {
