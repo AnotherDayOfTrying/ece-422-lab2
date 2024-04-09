@@ -531,11 +531,20 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("file does not exist")
+        return
+      }
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error("metadata does not exist")
+        return
+      }
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const file = fs.readFileSync(encryptedFile).toString()
-        const fileData = decrypt(Buffer.from(file, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+        const file = fs.readFileSync(encryptedFile).toString('utf-16le')
+        const fileData = decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)
         console.log(fileData)
       } else {
         console.log("File does not exist")
@@ -560,17 +569,29 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("no file")
+        return
+      }
+
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error('no metadata')
+        return
+      }
+      // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+        const encryptedFileData = (await encryptWithPermission(client, Buffer.from(args.data as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+        // const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
         fs.writeFileSync(encryptedFile, encryptedFileData)
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
           integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
           owner: userInfo._id.toString(),
-          read: 'user',
-          write: 'user',
+          read: metadata.read,
+          write: metadata.write,
         })
       } else {
         console.log("File does not exist")
