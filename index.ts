@@ -286,6 +286,10 @@ await yargs(process.argv.slice(2))
       })
     },
     async (args) => {
+      if (root) {
+        console.error("cannot mkdir in root")
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
@@ -341,6 +345,10 @@ await yargs(process.argv.slice(2))
       })
     },
     async (args) => {
+      if (root) {
+        console.error("cannot create in root")
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
