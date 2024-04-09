@@ -56,7 +56,7 @@ await yargs(process.argv.slice(2))
             if (!(args.user && args.pass)) throw "invalid inputs"
             const salt = crypto.randomBytes(16).toString('hex'); 
             const hashedPassword = hashWithSalt(args.pass as string, salt)
-            await createUser(client, args.user as string, hashedPassword, salt, generateKey(args.pass as string), generateIV().toString('hex'), [])
+            await createUser(client, args.user as string, hashedPassword, salt, generateKey(args.pass as string), generateIV().toString('hex'))
             fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
@@ -165,7 +165,7 @@ await yargs(process.argv.slice(2))
           console.error("Metadata not found for file")
           return
         }
-        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'hex'), userInfo, metadata.read)).toString()        
+        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-8'), userInfo, metadata.read)).toString()        
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
     })
