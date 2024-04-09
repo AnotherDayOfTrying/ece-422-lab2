@@ -184,7 +184,23 @@ await yargs(process.argv.slice(2))
         return
       }
       if (root) {
-        // TODO: check group permissions before allowing to check a user
+        if (userInfo.username != args.dir) {
+          if (userInfo.group) {
+            const group = await fetchGroup(client, userInfo.group)
+            if (group) {
+              if (!group.users.some((user) => user === args.dir)) {
+                console.error("Invalid Permissions")
+                return
+              }
+            } else {
+              console.error("Invalid Permissions")
+              return
+            }
+          } else {
+            console.error("Invalid Permissions")
+            return
+          }
+        }
         const cwd = process.cwd()
         process.chdir(path.join(pwd, args.dir as string))
         const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
