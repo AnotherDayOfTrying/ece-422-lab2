@@ -157,6 +157,7 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
+      console.log("IN LS")
       await Promise.all(fs.readdirSync(pwd, {
         withFileTypes: true
       }).map(async (file) => {
