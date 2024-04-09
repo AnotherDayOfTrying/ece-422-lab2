@@ -543,9 +543,9 @@ await yargs(process.argv.slice(2))
       }
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const file = fs.readFileSync(encryptedFile)
+        const file = fs.readFileSync(encryptedFile).toString('utf-16le')
         console.log(file)
-        const fileData = (await decryptWithPermission(client, file, userInfo, metadata.read))
+        const fileData = (await decryptWithPermission(client, Buffer.from('utf-16le'), userInfo, metadata.read))
         console.log(fileData)
         console.log(fileData.toString())
         console.log(fileData.toString('utf-16le'))
@@ -591,7 +591,7 @@ await yargs(process.argv.slice(2))
         console.log(TEST.toString())
         console.log(TEST.toString('utf-16le'))
         // const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
-        fs.writeFileSync(encryptedFile, encryptedFileData)
+        fs.writeFileSync(encryptedFile, encryptedFileData, {encoding: 'utf-16le'})
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
           integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
