@@ -160,7 +160,6 @@ await yargs(process.argv.slice(2))
       await Promise.all(fs.readdirSync(pwd, {
         withFileTypes: true
       }).map(async (file) => {
-        console.log("HERE")
         const metadata = await fetchMetadata(client, file.name)
         if (!metadata) {
           console.error("Metadata not found for file")
