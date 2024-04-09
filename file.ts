@@ -61,7 +61,7 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
         } else {
             if (file.isDirectory()) {
                 if (metadata.integrity !== hashFileIntegrity(filename[filename.length - 1], '')) {
-                    const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), _user, metadata.read)).toString()   
+                    const fileName = (await decryptWithPermission(client, Buffer.from(filename[filename.length - 1], 'utf-16le'), _user, metadata.read)).toString()   
                     // const fileName = decrypt(Buffer.from(file.name, 'hex'), _user.key, Buffer.from(_user.iv, 'hex')).toString()
     
                     console.error(`File ${path.join(pwd, fileName)} has been modified!`)
@@ -69,7 +69,7 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
             } else {
                 const data = fs.readFileSync(path.join(pwd, file.name)).toString()
                 if (metadata.integrity !== hashFileIntegrity(filename[filename.length - 1], data)) {
-                    const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), _user, metadata.read)).toString()   
+                    const fileName = (await decryptWithPermission(client, Buffer.from(filename[filename.length - 1], 'utf-16le'), _user, metadata.read)).toString()   
                     console.log(filename)
                     // const fileName = decrypt(Buffer.from(file.name, 'hex'), _user.key, Buffer.from(_user.iv, 'hex')).toString()
     
