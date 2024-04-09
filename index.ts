@@ -165,7 +165,7 @@ await yargs(process.argv.slice(2))
           console.error("Metadata not found for file")
           return
         }
-        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString()        
+        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')        
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
     })
@@ -362,7 +362,7 @@ await yargs(process.argv.slice(2))
       }
 
       process.chdir(path.join(pwd))
-      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-8'), userInfo, read)).toString('utf-16le')
+      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
       if (!fs.existsSync(encryptedFile) && args.file) {
         fs.writeFileSync(encryptedFile, '')
         await createMetadata(client, {
