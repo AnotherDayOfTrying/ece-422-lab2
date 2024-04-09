@@ -498,21 +498,19 @@ await yargs(process.argv.slice(2))
       }
 
       //read and unencrpyt file
-      const fileName = decrypt(Buffer.from(encryptedFile, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
-      let fileData = ''
+      let newFileName = decrypt(Buffer.from(encryptedFile, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+      let newFileData = ''
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile)) {
         const file = fs.readFileSync(encryptedFile).toString()
-        fileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+        newFileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
       } else {
         console.error("Unable to open file")
         return
       }
-      let newFileName = ''
-      let newFileData = ''
       if (read === 'user') { // encrypt using user
-        newFileName = encrypt(Buffer.from(fileName, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-        newFileData = encrypt(Buffer.from(fileData, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        newFileName = encrypt(Buffer.from(newFileName, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        newFileData = encrypt(Buffer.from(newFileData, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
       } else if (read === 'group') { // encrypt using group, no group === error
         if (!userInfo.group) {
           console.error("User does not have a group")
@@ -523,8 +521,8 @@ await yargs(process.argv.slice(2))
           console.error("User group does not exist")
           return
         }
-        newFileName = encrypt(Buffer.from(fileName, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
-        newFileData = encrypt(Buffer.from(fileData, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
+        newFileName = encrypt(Buffer.from(newFileName, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
+        newFileData = encrypt(Buffer.from(newFileData, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
       }
       fs.renameSync(encryptedFile, newFileName)
       fs.writeFileSync(newFileName, newFileData)
