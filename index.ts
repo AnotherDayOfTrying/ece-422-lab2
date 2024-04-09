@@ -544,11 +544,8 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const file = fs.readFileSync(encryptedFile).toString()
-        console.log(file)
-        const fileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read))
+        const fileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
         console.log(fileData)
-        console.log(fileData.toString())
-        console.log(fileData.toString('utf-16le'))
       } else {
         console.log("File does not exist")
       }
@@ -587,16 +584,7 @@ await yargs(process.argv.slice(2))
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const encryptedFileData = (await encryptWithPermission(client, Buffer.from(args.data as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
-        const TEST = await decryptWithPermission(client, Buffer.from(encryptedFileData, 'utf-16le'), userInfo, metadata.read)
-        console.log(TEST.toString())
-        console.log(TEST.toString('utf-16le'))
-        // const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
-        console.log(encryptedFileData)
         fs.writeFileSync(encryptedFile, encryptedFileData)
-        const fileRead = fs.readFileSync(encryptedFile)
-        console.log(fileRead)
-        console.log(fileRead.toString())
-        console.log(fileRead.toString('utf-16le'))
         
         
         await updateMetadata(client, encryptedFile, {
