@@ -6,8 +6,8 @@ import crypto from "crypto"
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, fetchGroup, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity, hashWithSalt } from "./encryption";
-import { PermissionMode, createMetadata, deleteMetadata, fetchMetadata, updateMetadata, verifyUserFiles } from "./file";
+import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity, hashWithSalt, decryptWithPermission, encryptWithPermission } from "./encryption";
+import { PermissionMode, createMetadata, deleteMetadata, fetchMetadata, fileExists, updateMetadata, verifyUserFiles } from "./file";
 
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
@@ -472,7 +472,11 @@ await yargs(process.argv.slice(2))
         return
       }
       if (!(args.file && args.r && args.w)) return
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("File does not exist")
+        return
+      }
       const metadata = await fetchMetadata(client, encryptedFile)
       if (!metadata) return
       if (metadata.owner !== userInfo._id.toString()) {
@@ -497,37 +501,14 @@ await yargs(process.argv.slice(2))
         write = 'all'
       }
 
-      //read and unencrpyt file
-      let newFileName = decrypt(Buffer.from(encryptedFile, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
-      let newFileData = ''
-      process.chdir(path.join(pwd))
-      if (fs.existsSync(encryptedFile)) {
-        const file = fs.readFileSync(encryptedFile).toString()
-        newFileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
-      } else {
-        console.error("Unable to open file")
-        return
-      }
-      if (read === 'user') { // encrypt using user
-        newFileName = encrypt(Buffer.from(newFileName, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-        newFileData = encrypt(Buffer.from(newFileData, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      } else if (read === 'group') { // encrypt using group, no group === error
-        if (!userInfo.group) {
-          console.error("User does not have a group")
-          return
-        }
-        const group = await fetchGroup(client, userInfo.group)
-        if (!group) {
-          console.error("User group does not exist")
-          return
-        }
-        newFileName = encrypt(Buffer.from(newFileName, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
-        newFileData = encrypt(Buffer.from(newFileData, 'utf-8'), group.key, Buffer.from(group.iv, 'hex')).toString('hex')
-      }
+      // unencrypt file 
+      const file = fs.readFileSync(encryptedFile).toString()
+      let newFileName = (await decryptWithPermission(client, Buffer.from(encryptedFile, 'hex'), userInfo, metadata.read)).toString()
+      let newFileData = (await decryptWithPermission(client, Buffer.from(file, 'hex'), userInfo, metadata.read)).toString()
+      newFileName = (await encryptWithPermission(client, Buffer.from(newFileName, 'utf-8'), userInfo, read)).toString('hex')
+      newFileData = (await encryptWithPermission(client, Buffer.from(newFileData, 'utf-8'), userInfo, read)).toString('hex')
       fs.renameSync(encryptedFile, newFileName)
       fs.writeFileSync(newFileName, newFileData)
-      console.log(newFileName)
-      console.log(newFileData)
       await updateMetadata(client, encryptedFile, {
         name: newFileName,
         integrity: hashFileIntegrity(newFileName, newFileData),
