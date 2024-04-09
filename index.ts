@@ -215,7 +215,51 @@ await yargs(process.argv.slice(2))
       if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
         process.chdir(path.join(pwd, args.dir as string))
       } else {
-        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+        
+        const encryptedDirectory = await fileExists(client, args.dir as string, userInfo, pwd)
+        if (!encryptedDirectory) {
+          console.error("Directory does not exist")
+          return
+        }
+        const metadata = await fetchMetadata(client, encryptedDirectory)
+        if (!metadata) {
+          console.error("Directory does not exist")
+          return
+        }
+
+        if (metadata.read === 'user' && metadata.owner != userInfo._id.toString()) {
+          console.error("Invalid Permissions")
+          return
+        } else if (metadata.read === 'group') {
+          if (!userInfo.group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const group = await fetchGroup(client, userInfo.group)
+          if (!group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const ownerUser = await fetchUser(client, metadata.owner)
+          if (!ownerUser) {
+            console.error("Owner no longer exists")
+            return
+          }
+          if (!ownerUser.group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const ownerGroup = await fetchGroup(client, ownerUser.group)
+          if (!ownerGroup) {
+            console.error("Invalid Permissions")
+            return
+          }
+          if (ownerGroup.name != group.name) {
+            console.error("Invalid Permissions")
+            return
+          }
+        }
+
         process.chdir(path.join(pwd, encryptedDirectory))
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
