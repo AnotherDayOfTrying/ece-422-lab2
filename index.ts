@@ -165,7 +165,7 @@ await yargs(process.argv.slice(2))
           console.error("Metadata not found for file")
           return
         }
-        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-8'), userInfo, metadata.read)).toString()        
+        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString()        
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
     })
@@ -199,7 +199,7 @@ await yargs(process.argv.slice(2))
       if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
         process.chdir(path.join(pwd, args.dir as string))
       } else {
-        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
         process.chdir(path.join(pwd, encryptedDirectory))
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
@@ -249,7 +249,7 @@ await yargs(process.argv.slice(2))
       }
 
       process.chdir(path.join(pwd))
-      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       if (!fs.existsSync(encryptedDirectory) && args.dir) {
         fs.mkdirSync(encryptedDirectory)
         await createMetadata(client, {
@@ -304,7 +304,7 @@ await yargs(process.argv.slice(2))
       }
 
       process.chdir(path.join(pwd))
-      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-8'), userInfo, read)).toString('utf-8')
+      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
       if (!fs.existsSync(encryptedFile) && args.file) {
         fs.writeFileSync(encryptedFile, '')
         await createMetadata(client, {
@@ -333,7 +333,7 @@ await yargs(process.argv.slice(2))
         return
       }
       process.chdir(path.join(pwd))
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       if (fs.existsSync(encryptedFile) && args.file) {
         fs.unlinkSync(encryptedFile)
         await deleteMetadata(client, encryptedFile)
@@ -356,7 +356,7 @@ await yargs(process.argv.slice(2))
         return
       }
       process.chdir(path.join(pwd))
-      const encryptedFile = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedFile = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       if (fs.existsSync(encryptedFile) && args.dir) {
         fs.rmdirSync(encryptedFile)
         await deleteMetadata(client, encryptedFile)
@@ -378,11 +378,11 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const file = fs.readFileSync(encryptedFile).toString()
-        const fileData = decrypt(Buffer.from(file, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+        const fileData = decrypt(Buffer.from(file, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
         console.log(fileData)
       } else {
         console.log("File does not exist")
@@ -407,10 +407,10 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+        const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
         fs.writeFileSync(encryptedFile, encryptedFileData)
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
@@ -442,8 +442,8 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
-      const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-8')
+      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const data = fs.readFileSync(encryptedFile).toString()
@@ -508,10 +508,10 @@ await yargs(process.argv.slice(2))
 
       // unencrypt file 
       const file = fs.readFileSync(encryptedFile).toString()
-      let newFileName = (await decryptWithPermission(client, Buffer.from(encryptedFile, 'utf-8'), userInfo, metadata.read)).toString()
-      let newFileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-8'), userInfo, metadata.read)).toString()
-      newFileName = (await encryptWithPermission(client, Buffer.from(newFileName, 'utf-8'), userInfo, read)).toString('utf-8')
-      newFileData = (await encryptWithPermission(client, Buffer.from(newFileData, 'utf-8'), userInfo, read)).toString('utf-8')
+      let newFileName = (await decryptWithPermission(client, Buffer.from(encryptedFile, 'utf-16le'), userInfo, metadata.read)).toString()
+      let newFileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString()
+      newFileName = (await encryptWithPermission(client, Buffer.from(newFileName, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      newFileData = (await encryptWithPermission(client, Buffer.from(newFileData, 'utf-16le'), userInfo, read)).toString('utf-16le')
       fs.renameSync(encryptedFile, newFileName)
       fs.writeFileSync(newFileName, newFileData)
       await updateMetadata(client, encryptedFile, {
