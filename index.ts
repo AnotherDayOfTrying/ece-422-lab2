@@ -167,6 +167,8 @@ await yargs(process.argv.slice(2))
           return
         }
         const fileName = decryptWithPermission(client, Buffer.from(file.name, 'hex'), userInfo, metadata.read)
+        console.log("filename")
+        
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
     })
