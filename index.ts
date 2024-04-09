@@ -690,6 +690,8 @@ await yargs(process.argv.slice(2))
       console.log(newFileData)
       newFileName = (await encryptWithPermission(client, Buffer.from(newFileName, 'utf-16le'), userInfo, read)).toString('utf-16le')
       newFileData = (await encryptWithPermission(client, Buffer.from(newFileData, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      console.log(newFileName)
+      console.log(newFileData)
       fs.renameSync(encryptedFile, newFileName)
       fs.writeFileSync(newFileName, newFileData)
       await updateMetadata(client, encryptedFile, {
