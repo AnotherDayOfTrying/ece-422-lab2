@@ -261,6 +261,7 @@ await yargs(process.argv.slice(2))
         }
         console.log(encryptedDirectory)
         console.log(path.join(pwd, encryptedDirectory))
+        console.log(process.cwd())
         process.chdir(path.join(pwd, encryptedDirectory))
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
