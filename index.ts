@@ -390,7 +390,6 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      process.chdir(path.join(pwd))
       const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
       if (!encryptedFile) {
         console.error("Does not exist")
@@ -435,6 +434,7 @@ await yargs(process.argv.slice(2))
           return
         }
       }
+      process.chdir(path.join(pwd))
       // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       if (fs.existsSync(encryptedFile) && args.file) {
         fs.unlinkSync(encryptedFile)
