@@ -249,7 +249,7 @@ await yargs(process.argv.slice(2))
         fs.mkdirSync(encryptedDirectory)
         await createMetadata(client, {
           name: encryptedDirectory,
-          integrity: hashFileIntegrity(''),
+          integrity: hashFileIntegrity(encryptedDirectory, ''),
           owner: userInfo._id.toString(),
           read: read,
           write: write,
@@ -304,7 +304,7 @@ await yargs(process.argv.slice(2))
         fs.writeFileSync(encryptedFile, '')
         await createMetadata(client, {
           name: encryptedFile,
-          integrity: hashFileIntegrity(''),
+          integrity: hashFileIntegrity(encryptedFile, ''),
           owner: userInfo._id.toString(),
           read: read,
           write: write,
@@ -409,7 +409,7 @@ await yargs(process.argv.slice(2))
         fs.writeFileSync(encryptedFile, encryptedFileData)
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
-          integrity: hashFileIntegrity(encryptedFileData),
+          integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
           owner: userInfo._id.toString(),
           read: 'user',
           write: 'user',
@@ -445,7 +445,7 @@ await yargs(process.argv.slice(2))
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, encryptedFile, {
           name: newEncryptedFile,
-          integrity: hashFileIntegrity(data),
+          integrity: hashFileIntegrity(newEncryptedFile, data),
           owner: userInfo._id.toString(),
           read: 'user',
           write: 'user'
@@ -530,7 +530,7 @@ await yargs(process.argv.slice(2))
       console.log(newFileData)
       await updateMetadata(client, encryptedFile, {
         name: newFileName,
-        integrity: hashFileIntegrity(newFileData),
+        integrity: hashFileIntegrity(newFileName, newFileData),
         owner: userInfo._id.toString(),
         read: read,
         write: write,

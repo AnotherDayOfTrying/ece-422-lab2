@@ -27,8 +27,8 @@ export const reencrypt = (encryptedData: Buffer, secretKey: string, iv: Buffer, 
   return encrypt(decrypt(encryptedData, secretKey, iv), newSecretKey, newIv)
 }
 
-export const hashFileIntegrity = (data: string) => {
-  return crypto.createHash('sha256').update(data).digest('hex')
+export const hashFileIntegrity = (filename: string, data: string) => {
+  return crypto.createHash('sha256').update(filename).update(data).digest('hex')
 }
 
 export const hashWithSalt = (data: string, salt: string) => {
