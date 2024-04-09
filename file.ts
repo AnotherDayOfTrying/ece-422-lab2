@@ -71,24 +71,21 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
 
 export const fileExists = async (client: MongoClient, filename: string, userInfo: User, pwd: string): Promise<string | null> => {
     const cwd = process.cwd()
-    console.log("DEBUG")
-    console.log(cwd);
-    process.chdir(path.join(pwd))
-    if (fs.existsSync(filename)) return filename
-    let encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
-    if (fs.existsSync(encryptedFileName)) return encryptedFileName
-    if (userInfo.group) {
-        const group = await fetchGroup(client, userInfo.group)
-        if (group)
-            encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), group.key, Buffer.from(group.iv, 'hex')).toString('utf-16le')
+    try {
+        process.chdir(path.join(pwd))
+        if (fs.existsSync(filename)) return filename
+        let encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
         if (fs.existsSync(encryptedFileName)) return encryptedFileName
+        if (userInfo.group) {
+            const group = await fetchGroup(client, userInfo.group)
+            if (group)
+                encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), group.key, Buffer.from(group.iv, 'hex')).toString('utf-16le')
+            if (fs.existsSync(encryptedFileName)) return encryptedFileName
+        }
+        return null
+    } finally {
+        process.chdir(cwd)
     }
-    process.chdir(cwd)
-
-    console.log(process.cwd())
-    console.log("DEBUG AFTER")
-
-    return null
 }
 
 export const encodePermission = (encryptedData: string, permissionMode: PermissionMode): string => {
