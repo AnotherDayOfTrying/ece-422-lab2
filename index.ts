@@ -617,8 +617,17 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
-      const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("no file exists")
+        return
+      }
+      // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) return
+      
+      const newEncryptedFile = (await encryptWithPermission(client, Buffer.from(args.rfile as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+      // const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const data = fs.readFileSync(encryptedFile).toString()
@@ -627,8 +636,8 @@ await yargs(process.argv.slice(2))
           name: newEncryptedFile,
           integrity: hashFileIntegrity(newEncryptedFile, data),
           owner: userInfo._id.toString(),
-          read: 'user',
-          write: 'user'
+          read: metadata.read,
+          write: metadata.write
         })
       }
     })
