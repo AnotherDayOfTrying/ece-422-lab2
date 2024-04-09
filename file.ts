@@ -83,12 +83,14 @@ export const fileExists = async (client: MongoClient, filename: string, userInfo
         process.chdir(path.join(pwd))
         if (fs.existsSync(filename)) return filename
         let encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+        console.log(encryptedFileName)
         if (fs.existsSync(encryptedFileName)) return encryptedFileName
         if (userInfo.group) {
             const group = await fetchGroup(client, userInfo.group)
             if (group)
                 encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), group.key, Buffer.from(group.iv, 'hex')).toString('utf-16le')
             if (fs.existsSync(encryptedFileName)) return encryptedFileName
+            console.log(encryptedFileName)
         }
         return null
     } finally {
