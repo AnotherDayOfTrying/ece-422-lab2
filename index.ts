@@ -165,7 +165,9 @@ await yargs(process.argv.slice(2))
           console.error("Metadata not found for file")
           return
         }
-        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')        
+        console.log(file.name)
+        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString()   
+        console.log(fileName)     
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
     })
