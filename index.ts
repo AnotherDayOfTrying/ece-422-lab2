@@ -146,6 +146,7 @@ await yargs(process.argv.slice(2))
     (args)=>{
     },
     async (args) => {
+      console.log(root)
       if (root) {
         fs.readdirSync(pwd, {withFileTypes: true}).forEach((file) => {
           console.log(file.isDirectory() ? "/" + file.name : file.name)
