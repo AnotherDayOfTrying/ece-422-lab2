@@ -71,6 +71,8 @@ export const verifyUserFiles = async (client: MongoClient, user: string, root_di
 
 export const fileExists = async (client: MongoClient, filename: string, userInfo: User, pwd: string): Promise<string | null> => {
     const cwd = process.cwd()
+    console.log("DEBUG")
+    console.log(cwd);
     process.chdir(path.join(pwd))
     if (fs.existsSync(filename)) return filename
     let encryptedFileName = encrypt(Buffer.from(filename, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
@@ -82,6 +84,9 @@ export const fileExists = async (client: MongoClient, filename: string, userInfo
         if (fs.existsSync(encryptedFileName)) return encryptedFileName
     }
     process.chdir(cwd)
+
+    console.log(process.cwd())
+    console.log("DEBUG AFTER")
 
     return null
 }
