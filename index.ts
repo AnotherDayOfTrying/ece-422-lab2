@@ -5,7 +5,7 @@ import path from "path";
 import crypto from "crypto"
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, fetchGroup, removeUserFromGroup } from "./admin";
-import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
+import { checkReadPermissions, checkWritePermissions, fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
 import { generateKey, generateIV, hashFileIntegrity, hashWithSalt, decryptWithPermission, encryptWithPermission } from "./encryption";
 import { PermissionMode, createMetadata, deleteMetadata, fetchMetadata, fileExists, updateMetadata, verifyUserFiles } from "./file";
 
@@ -165,6 +165,9 @@ await yargs(process.argv.slice(2))
           console.error("Metadata not found for file")
           return
         }
+
+        if (!await checkReadPermissions(client, metadata, userInfo)) return
+
         const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString()   
         console.log(file.isDirectory() ? "/" + fileName : fileName)
       }))
@@ -225,39 +228,7 @@ await yargs(process.argv.slice(2))
           console.error("Directory does not exist")
           return
         }
-
-        if (metadata.read === 'user' && metadata.owner != userInfo._id.toString()) {
-          console.error("Invalid Permissions")
-          return
-        } else if (metadata.read === 'group') {
-          if (!userInfo.group) {
-            console.error("Invalid Permissions")
-            return
-          }
-          const group = await fetchGroup(client, userInfo.group)
-          if (!group) {
-            console.error("Invalid Permissions")
-            return
-          }
-          const ownerUser = await fetchUser(client, metadata.owner)
-          if (!ownerUser) {
-            console.error("Owner no longer exists")
-            return
-          }
-          if (!ownerUser.group) {
-            console.error("Invalid Permissions")
-            return
-          }
-          const ownerGroup = await fetchGroup(client, ownerUser.group)
-          if (!ownerGroup) {
-            console.error("Invalid Permissions")
-            return
-          }
-          if (ownerGroup.name != group.name) {
-            console.error("Invalid Permissions")
-            return
-          }
-        }
+        if (!await checkReadPermissions(client, metadata, userInfo)) return
         process.chdir(path.join(pwd, encryptedDirectory))
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
@@ -410,6 +381,8 @@ await yargs(process.argv.slice(2))
         return
       }
 
+      if (!await checkWritePermissions(client, metadata, userInfo)) return
+
       if (metadata.write === 'user' && metadata.owner != userInfo._id.toString()) {
         console.error("Invalid Permissions")
         return
@@ -476,38 +449,8 @@ await yargs(process.argv.slice(2))
         return
       }
 
-      if (metadata.write === 'user' && metadata.owner != userInfo._id.toString()) {
-        console.error("Invalid Permissions")
-        return
-      } else if (metadata.write === 'group') {
-        if (!userInfo.group) {
-          console.error("Invalid Permissions")
-          return
-        }
-        const group = await fetchGroup(client, userInfo.group)
-        if (!group) {
-          console.error("Invalid Permissions")
-          return
-        }
-        const ownerUser = await fetchUser(client, metadata.owner)
-        if (!ownerUser) {
-          console.error("Owner no longer exists")
-          return
-        }
-        if (!ownerUser.group) {
-          console.error("Invalid Permissions")
-          return
-        }
-        const ownerGroup = await fetchGroup(client, ownerUser.group)
-        if (!ownerGroup) {
-          console.error("Invalid Permissions")
-          return
-        }
-        if (ownerGroup.name != group.name) {
-          console.error("Invalid Permissions")
-          return
-        }
-      }
+      if (!await checkWritePermissions(client, metadata, userInfo)) return
+
       process.chdir(path.join(pwd))
       // const encryptedFile = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       if (fs.existsSync(encryptedFile) && args.dir) {
@@ -541,6 +484,9 @@ await yargs(process.argv.slice(2))
         console.error("metadata does not exist")
         return
       }
+
+      if (!await checkReadPermissions(client, metadata, userInfo)) return
+
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const file = fs.readFileSync(encryptedFile).toString()
@@ -580,6 +526,9 @@ await yargs(process.argv.slice(2))
         console.error('no metadata')
         return
       }
+
+      if (!await checkWritePermissions(client, metadata, userInfo)) return
+
       // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
@@ -625,6 +574,8 @@ await yargs(process.argv.slice(2))
       // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       const metadata = await fetchMetadata(client, encryptedFile)
       if (!metadata) return
+
+      if (!await checkWritePermissions(client, metadata, userInfo)) return
       
       const newEncryptedFile = (await encryptWithPermission(client, Buffer.from(args.rfile as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
       // const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
