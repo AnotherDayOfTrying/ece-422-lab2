@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 import yargs from "yargs"
-import fs, { read, write } from "fs"
+import fs from "fs"
 import path from "path";
 import crypto from "crypto"
 import { MongoClient, ServerApiVersion } from "mongodb";
 import { addUserToGroup, createGroup, createUser, fetchGroup, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity, hashWithSalt, decryptWithPermission, encryptWithPermission } from "./encryption";
+import { generateKey, generateIV, hashFileIntegrity, hashWithSalt, decryptWithPermission, encryptWithPermission } from "./encryption";
 import { PermissionMode, createMetadata, deleteMetadata, fetchMetadata, fileExists, updateMetadata, verifyUserFiles } from "./file";
 
 
@@ -54,7 +54,7 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
-            const salt = crypto.randomBytes(16).toString('hex'); 
+            const salt = crypto.randomBytes(16).toString('hex')
             const hashedPassword = hashWithSalt(args.pass as string, salt)
             await createUser(client, args.user as string, hashedPassword, salt, generateKey(args.pass as string), generateIV().toString('hex'))
             fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
