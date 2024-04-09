@@ -2,11 +2,13 @@
 import yargs from "yargs"
 import fs from "fs"
 import path from "path";
+import crypto from "crypto"
 import { MongoClient, ServerApiVersion } from "mongodb";
-import { addUserToGroup, createGroup, createUser, removeUserFromGroup } from "./admin";
+import { addUserToGroup, createGroup, createUser, fetchGroup, removeUserFromGroup } from "./admin";
 import { fetchUser, loginUser, logoutUser, verifyAdmin } from "./auth";
-import { generateKey, generateIV, encrypt, decrypt, hashFileIntegrity } from "./encryption";
-import { createMetadata, updateMetadata, verifyUserFiles } from "./file";
+import { generateKey, generateIV, hashFileIntegrity, hashWithSalt, decryptWithPermission, encryptWithPermission } from "./encryption";
+import { PermissionMode, createMetadata, deleteMetadata, fetchMetadata, fileExists, updateMetadata, verifyUserFiles } from "./file";
+
 
 const uri = `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.3`
 
@@ -52,8 +54,9 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!(args.user && args.pass)) throw "invalid inputs"
-            const encryptedPassword = encrypt(Buffer.from(args.pass as string, 'utf-8'), generateKey(process.env.ADMIN_PASSWORD!), Buffer.from(process.env.ADMIN_IV!, 'hex')).toString('hex')
-            await createUser(client, args.user as string, encryptedPassword, generateKey(args.pass as string), generateIV().toString('hex'))
+            const salt = crypto.randomBytes(16).toString('hex')
+            const hashedPassword = hashWithSalt(args.pass as string, salt)
+            await createUser(client, args.user as string, hashedPassword, salt, generateKey(args.pass as string), generateIV().toString('hex'))
             fs.mkdirSync(path.join(ROOT_DIR, args.user as string)) // create new folder for user
             console.log(`Created User: ${args.user}`)
           }
@@ -68,7 +71,7 @@ await yargs(process.argv.slice(2))
           },
           async (args) => {
             if (!args.name) throw "invalid inputs"
-            await createGroup(client, args.name as string)
+            await createGroup(client, args.name as string, generateKey(args.name as string), generateIV().toString('hex'), [])
             console.log(`Created Group: ${args.name}`)
           }
         )
@@ -154,12 +157,17 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      fs.readdirSync(pwd, {
+      await Promise.all(fs.readdirSync(pwd, {
         withFileTypes: true
-      }).forEach((file) => {
-        const fileName = decrypt(Buffer.from(file.name, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+      }).map(async (file) => {
+        const metadata = await fetchMetadata(client, file.name)
+        if (!metadata) {
+          console.error("Metadata not found for file")
+          return
+        }
+        const fileName = (await decryptWithPermission(client, Buffer.from(file.name, 'utf-16le'), userInfo, metadata.read)).toString()   
         console.log(file.isDirectory() ? "/" + fileName : fileName)
-      })
+      }))
     })
   .command('cd [dir]', 'change directory',
     (yargs)=>{
@@ -176,6 +184,23 @@ await yargs(process.argv.slice(2))
         return
       }
       if (root) {
+        if (userInfo.username != args.dir) {
+          if (userInfo.group) {
+            const group = await fetchGroup(client, userInfo.group)
+            if (group) {
+              if (!group.users.some((user) => user === args.dir)) {
+                console.error("Invalid Permissions")
+                return
+              }
+            } else {
+              console.error("Invalid Permissions")
+              return
+            }
+          } else {
+            console.error("Invalid Permissions")
+            return
+          }
+        }
         const cwd = process.cwd()
         process.chdir(path.join(pwd, args.dir as string))
         const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
@@ -190,7 +215,49 @@ await yargs(process.argv.slice(2))
       if (!(args.dir as string).match(/^[0-9a-zA-Z]+$/)) {
         process.chdir(path.join(pwd, args.dir as string))
       } else {
-        const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        const encryptedDirectory = await fileExists(client, args.dir as string, userInfo, pwd)
+        if (!encryptedDirectory) {
+          console.error("Directory does not exist")
+          return
+        }
+        const metadata = await fetchMetadata(client, encryptedDirectory)
+        if (!metadata) {
+          console.error("Directory does not exist")
+          return
+        }
+
+        if (metadata.read === 'user' && metadata.owner != userInfo._id.toString()) {
+          console.error("Invalid Permissions")
+          return
+        } else if (metadata.read === 'group') {
+          if (!userInfo.group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const group = await fetchGroup(client, userInfo.group)
+          if (!group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const ownerUser = await fetchUser(client, metadata.owner)
+          if (!ownerUser) {
+            console.error("Owner no longer exists")
+            return
+          }
+          if (!ownerUser.group) {
+            console.error("Invalid Permissions")
+            return
+          }
+          const ownerGroup = await fetchGroup(client, ownerUser.group)
+          if (!ownerGroup) {
+            console.error("Invalid Permissions")
+            return
+          }
+          if (ownerGroup.name != group.name) {
+            console.error("Invalid Permissions")
+            return
+          }
+        }
         process.chdir(path.join(pwd, encryptedDirectory))
       }
       const newDirectory = Array.from(process.cwd().matchAll(/^.*\/file_system(.*)/g), m => m[1])[0]
@@ -199,29 +266,125 @@ await yargs(process.argv.slice(2))
         console.log(directory)
       }
     })
-  .command('mkdir [dir]', 'make a new subdirectory',
+  .command('mkdir [dir] [-r (u|g|a)] [-w (u|g|a)]', 'make a new subdirectory',
     (yargs)=>{
       yargs.positional('dir', {
         describe: 'directory to create',
         default: '',
         type: 'string'
       })
+      .option('r', { //read
+        default: 'u'
+      })
+      .option('w', { //write
+        default: 'u'
+      })
     },
     async (args) => {
+      if (root) {
+        console.error("cannot mkdir in root")
+        return
+      }
       const userInfo = await fetchUser(client, user)
       if (!userInfo) {
         console.error("No user is logged in...")
         return
       }
+
+      let read: PermissionMode = 'user'
+      let write: PermissionMode = 'user'
+      // parse read and write
+      if (args.r === 'u') {
+        read = 'user'
+      } else if (args.r === 'g') {
+        read = 'group'
+      } else if (args.r === 'a') {
+        read = 'all'
+      }
+
+      if (args.w === 'u') {
+        write = 'user'
+      } else if (args.w === 'g') {
+        write = 'group'
+      } else if (args.w === 'a') {
+        write = 'all'
+      }
+
       process.chdir(path.join(pwd))
-      const encryptedDirectory = encrypt(Buffer.from(args.dir as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedDirectory = (await encryptWithPermission(client, Buffer.from(args.dir as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
       if (!fs.existsSync(encryptedDirectory) && args.dir) {
         fs.mkdirSync(encryptedDirectory)
+        await createMetadata(client, {
+          name: encryptedDirectory,
+          integrity: hashFileIntegrity(encryptedDirectory, ''),
+          owner: userInfo._id.toString(),
+          read: read,
+          write: write,
+        })
       } else {
         console.log("Directory already exists")
       }
     })
-  .command('touch [file]', 'create a new file',
+  .command('touch [file] [-r (u|g|a)] [-w (u|g|a)]', 'create a new file',
+    (yargs) => {
+      yargs.positional('file', {
+        describe: 'file to create',
+        default: '',
+        type: 'string'
+      })
+      .option('r', { //read
+        default: 'u'
+      })
+      .option('w', { //write
+        default: 'u'
+      })
+    },
+    async (args) => {
+      if (root) {
+        console.error("cannot create in root")
+        return
+      }
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+
+      let read: PermissionMode = 'user'
+      let write: PermissionMode = 'user'
+      // parse read and write
+      if (args.r === 'u') {
+        read = 'user'
+      } else if (args.r === 'g') {
+        read = 'group'
+      } else if (args.r === 'a') {
+        read = 'all'
+      }
+
+      if (args.w === 'u') {
+        write = 'user'
+      } else if (args.w === 'g') {
+        write = 'group'
+      } else if (args.w === 'a') {
+        write = 'all'
+      }
+
+      process.chdir(path.join(pwd))
+      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      if (!fs.existsSync(encryptedFile) && args.file) {
+        fs.writeFileSync(encryptedFile, '')
+        await createMetadata(client, {
+          name: encryptedFile,
+          integrity: hashFileIntegrity(encryptedFile, ''),
+          owner: userInfo._id.toString(),
+          read: read,
+          write: write,
+        })
+      } else {
+        console.log("File already exists")
+      }
+    })
+  .command('rm [file]', 'remove file',
     (yargs) => {
       yargs.positional('file', {
         describe: 'file to create',
@@ -235,21 +398,123 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("Does not exist")
+        return
+      }
+
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error("No metadata")
+        return
+      }
+
+      if (metadata.write === 'user' && metadata.owner != userInfo._id.toString()) {
+        console.error("Invalid Permissions")
+        return
+      } else if (metadata.write === 'group') {
+        if (!userInfo.group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const group = await fetchGroup(client, userInfo.group)
+        if (!group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const ownerUser = await fetchUser(client, metadata.owner)
+        if (!ownerUser) {
+          console.error("Owner no longer exists")
+          return
+        }
+        if (!ownerUser.group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const ownerGroup = await fetchGroup(client, ownerUser.group)
+        if (!ownerGroup) {
+          console.error("Invalid Permissions")
+          return
+        }
+        if (ownerGroup.name != group.name) {
+          console.error("Invalid Permissions")
+          return
+        }
+      }
       process.chdir(path.join(pwd))
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      if (!fs.existsSync(encryptedFile) && args.file) {
-        fs.writeFileSync(encryptedFile, '')
-        await createMetadata(client, {
-          name: encryptedFile,
-          integrity: hashFileIntegrity(''),
-          owner: userInfo._id.toString(),
-          groups: [],
-          userPermissions: [true, true],
-          groupPermissions: [false, false],
-          allPermissions: [false, false]
-        })
+      if (fs.existsSync(encryptedFile) && args.file) {
+        fs.unlinkSync(encryptedFile)
+        await deleteMetadata(client, encryptedFile)
       } else {
-        console.log("File already exists")
+        console.log("File does not exist")
+      }
+    })
+  .command('rmdir [dir]', 'remove directory',
+    (yargs) => {
+      yargs.positional('dir', {
+        describe: 'dir to remove',
+        default: '',
+        type: 'string'
+      })
+    },
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+      const encryptedFile = await fileExists(client, args.dir as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("Does not exist")
+        return
+      }
+
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error("No metadata")
+        return
+      }
+
+      if (metadata.write === 'user' && metadata.owner != userInfo._id.toString()) {
+        console.error("Invalid Permissions")
+        return
+      } else if (metadata.write === 'group') {
+        if (!userInfo.group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const group = await fetchGroup(client, userInfo.group)
+        if (!group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const ownerUser = await fetchUser(client, metadata.owner)
+        if (!ownerUser) {
+          console.error("Owner no longer exists")
+          return
+        }
+        if (!ownerUser.group) {
+          console.error("Invalid Permissions")
+          return
+        }
+        const ownerGroup = await fetchGroup(client, ownerUser.group)
+        if (!ownerGroup) {
+          console.error("Invalid Permissions")
+          return
+        }
+        if (ownerGroup.name != group.name) {
+          console.error("Invalid Permissions")
+          return
+        }
+      }
+      process.chdir(path.join(pwd))
+      // const encryptedFile = encrypt(Buffer.from(args.dir as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      if (fs.existsSync(encryptedFile) && args.dir) {
+        fs.rmdirSync(encryptedFile)
+        await deleteMetadata(client, encryptedFile)
+      } else {
+        console.log("File does not exist")
       }
     })
   .command('cat [file]', 'read a file',
@@ -266,11 +531,20 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("file does not exist")
+        return
+      }
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error("metadata does not exist")
+        return
+      }
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const file = fs.readFileSync(encryptedFile).toString()
-        const fileData = decrypt(Buffer.from(file, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+        const fileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
         console.log(fileData)
       } else {
         console.log("File does not exist")
@@ -295,19 +569,30 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("no file")
+        return
+      }
+
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) {
+        console.error('no metadata')
+        return
+      }
+      // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+        const encryptedFileData = (await encryptWithPermission(client, Buffer.from(args.data as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
         fs.writeFileSync(encryptedFile, encryptedFileData)
+        
+        
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
-          integrity: hashFileIntegrity(encryptedFileData),
+          integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
           owner: userInfo._id.toString(),
-          groups: [],
-          userPermissions: [true, true],
-          groupPermissions: [false, false],
-          allPermissions: [false, false]
+          read: metadata.read,
+          write: metadata.write,
         })
       } else {
         console.log("File does not exist")
@@ -332,23 +617,108 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
-      const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("no file exists")
+        return
+      }
+      // const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) return
+      
+      const newEncryptedFile = (await encryptWithPermission(client, Buffer.from(args.rfile as string, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+      // const newEncryptedFile = encrypt(Buffer.from(args.rfile as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
         const data = fs.readFileSync(encryptedFile).toString()
         fs.renameSync(encryptedFile, newEncryptedFile)
         await updateMetadata(client, encryptedFile, {
           name: newEncryptedFile,
-          integrity: hashFileIntegrity(data),
+          integrity: hashFileIntegrity(newEncryptedFile, data),
           owner: userInfo._id.toString(),
-          groups: [],
-          userPermissions: [true, true],
-          groupPermissions: [false, false],
-          allPermissions: [false, false]
+          read: metadata.read,
+          write: metadata.write
         })
       }
     })
+  .command('changePermissions [file] [-r (u|g|a)] [-w (u|g|a)]', 'Change permission of a file',
+    (yargs) => {
+      yargs
+        .positional('file', {
+          demandOption: true
+        })
+        .option('r', { //read
+          default: 'u'
+        })
+        .option('w', { //write
+          default: 'u'
+        })
+    },
+    async (args) => {
+      const userInfo = await fetchUser(client, user)
+      if (!userInfo) {
+        console.error("No user is logged in...")
+        return
+      }
+      if (!(args.file && args.r && args.w)) return
+      const encryptedFile = await fileExists(client, args.file as string, userInfo, pwd)
+      if (!encryptedFile) {
+        console.error("File does not exist")
+        return
+      }
+      const metadata = await fetchMetadata(client, encryptedFile)
+      if (!metadata) return
+      if (metadata.owner !== userInfo._id.toString()) {
+        console.error("User is not the owner of the file")
+      }
+      let read: PermissionMode = 'user'
+      let write: PermissionMode = 'user'
+      // parse read and write
+      if (args.r === 'u') {
+        read = 'user'
+      } else if (args.r === 'g') {
+        read = 'group'
+      } else if (args.r === 'a') {
+        read = 'all'
+      }
+
+      if (args.w === 'u') {
+        write = 'user'
+      } else if (args.w === 'g') {
+        write = 'group'
+      } else if (args.w === 'a') {
+        write = 'all'
+      }
+
+      // unencrypt file 
+      process.chdir(path.join(pwd))
+      const file = fs.readFileSync(encryptedFile).toString()
+      let newFileName = (await decryptWithPermission(client, Buffer.from(encryptedFile, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+      let newFileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+      newFileName = (await encryptWithPermission(client, Buffer.from(newFileName, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      newFileData = (await encryptWithPermission(client, Buffer.from(newFileData, 'utf-16le'), userInfo, read)).toString('utf-16le')
+      fs.renameSync(encryptedFile, newFileName)
+      fs.writeFileSync(newFileName, newFileData)
+      await updateMetadata(client, encryptedFile, {
+        name: newFileName,
+        integrity: hashFileIntegrity(newFileName, newFileData),
+        owner: userInfo._id.toString(),
+        read: read,
+        write: write,
+      })
+    }
+  )
+  .command('whoami', 'display which user you are',
+    () => {},
+    async () => {
+      if (!user) {
+        console.log("Currently not logged in...")
+        return
+      }
+      const _user = await fetchUser(client, user)
+      console.log(_user?.username)
+    }
+  )
   .recommendCommands()
   .strictCommands()
   .demandCommand()
