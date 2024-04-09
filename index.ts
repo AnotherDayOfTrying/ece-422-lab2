@@ -304,7 +304,7 @@ await yargs(process.argv.slice(2))
       }
 
       process.chdir(path.join(pwd))
-      const encryptedFile = encrypt(Buffer.from(args.file as string, 'utf-8'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('hex')
+      const encryptedFile = (await encryptWithPermission(client, Buffer.from(args.file as string, 'utf-8'), userInfo, read)).toString('hex')
       if (!fs.existsSync(encryptedFile) && args.file) {
         fs.writeFileSync(encryptedFile, '')
         await createMetadata(client, {
