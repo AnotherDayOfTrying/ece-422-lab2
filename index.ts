@@ -682,6 +682,7 @@ await yargs(process.argv.slice(2))
       }
 
       // unencrypt file 
+      process.chdir(path.join(pwd))
       const file = fs.readFileSync(encryptedFile).toString()
       let newFileName = (await decryptWithPermission(client, Buffer.from(encryptedFile, 'utf-16le'), userInfo, metadata.read)).toString()
       let newFileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString()
