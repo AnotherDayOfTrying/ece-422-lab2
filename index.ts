@@ -526,7 +526,8 @@ await yargs(process.argv.slice(2))
       }
       fs.renameSync(encryptedFile, newFileName)
       fs.writeFileSync(newFileName, newFileData)
-
+      console.log(newFileName)
+      console.log(newFileData)
       await updateMetadata(client, encryptedFile, {
         name: newFileName,
         integrity: hashFileIntegrity(newFileData),
