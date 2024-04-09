@@ -543,11 +543,12 @@ await yargs(process.argv.slice(2))
       }
       process.chdir(path.join(pwd))
       if (fs.existsSync(encryptedFile) && args.file) {
-        const file = fs.readFileSync(encryptedFile).toString('utf-16le')
+        const file = fs.readFileSync(encryptedFile)
         console.log(file)
-        console.log(Buffer.from(file, 'utf-16le'))
-        const fileData = (await decryptWithPermission(client, Buffer.from(file, 'utf-16le'), userInfo, metadata.read)).toString('utf-16le')
+        const fileData = (await decryptWithPermission(client, file, userInfo, metadata.read))
         console.log(fileData)
+        console.log(fileData.toString())
+        console.log(fileData.toString('utf-16le'))
       } else {
         console.log("File does not exist")
       }
