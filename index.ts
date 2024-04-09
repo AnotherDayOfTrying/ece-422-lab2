@@ -157,12 +157,17 @@ await yargs(process.argv.slice(2))
         console.error("No user is logged in...")
         return
       }
-      fs.readdirSync(pwd, {
+      Promise.all(fs.readdirSync(pwd, {
         withFileTypes: true
-      }).forEach((file) => {
-        const fileName = decrypt(Buffer.from(file.name, 'hex'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString()
+      }).map(async (file) => {
+        const metadata = await fetchMetadata(client, file.name)
+        if (!metadata) {
+          console.error("Metadata not found for file")
+          return
+        }
+        const fileName = decryptWithPermission(client, Buffer.from(file.name, 'hex'), userInfo, metadata.read)
         console.log(file.isDirectory() ? "/" + fileName : fileName)
-      })
+      }))
     })
   .command('cd [dir]', 'change directory',
     (yargs)=>{
