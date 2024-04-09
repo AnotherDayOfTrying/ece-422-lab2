@@ -591,7 +591,14 @@ await yargs(process.argv.slice(2))
         console.log(TEST.toString())
         console.log(TEST.toString('utf-16le'))
         // const encryptedFileData = encrypt(Buffer.from(args.data as string, 'utf-16le'), userInfo.key, Buffer.from(userInfo.iv, 'hex')).toString('utf-16le')
-        fs.writeFileSync(encryptedFile, encryptedFileData, {encoding: 'utf-16le'})
+        console.log(encryptedFileData)
+        fs.writeFileSync(encryptedFile, encryptedFileData)
+        const fileRead = fs.readFileSync(encryptedFile)
+        console.log(fileRead)
+        console.log(fileRead.toString())
+        console.log(fileRead.toString('utf-16le'))
+        
+        
         await updateMetadata(client, encryptedFile, {
           name: encryptedFile,
           integrity: hashFileIntegrity(encryptedFile, encryptedFileData),
