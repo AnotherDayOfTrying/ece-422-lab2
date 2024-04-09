@@ -528,7 +528,7 @@ await yargs(process.argv.slice(2))
       fs.writeFileSync(newFileName, newFileData)
 
       await updateMetadata(client, encryptedFile, {
-        name: newFileData,
+        name: newFileName,
         integrity: hashFileIntegrity(newFileData),
         owner: userInfo._id.toString(),
         read: read,
